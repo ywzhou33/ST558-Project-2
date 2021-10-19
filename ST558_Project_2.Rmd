@@ -1,0 +1,23 @@
+---
+title: "ST558 Project 2"
+author: "Aries Zhou"
+date: "10/19/2021"
+output: html_document
+---
+
+```{r, echo = FALSE, eval = FALSE}
+rmarkdown::render("./ST558_Proj_1.Rmd", 
+                  output_format = "github_document", 
+                  output_dir = "./",
+                  output_options = list(html_preview = FALSE, keep_html=FALSE))
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE, fig.align='center', fig.path = "./")
+```
+
+
+
+
+
+
