@@ -16,8 +16,30 @@ rmarkdown::render("./ST558_Proj_1.Rmd",
 knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE, fig.align='center', fig.path = "./")
 ```
 
+### Introduction  
+
+List of packages used:  
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+### Data  
+
+```{r}
+# import data
+pop <- read.csv("OnlineNewsPopularity.csv")
+
+# subset data on data channel of interest
+pop.life <- pop %>%
+  subset(data_channel_is_lifestyle == 1) %>% select(-starts_with("data_channel_is_"))
+View(pop.life)
+```
 
 
+### Summarizations  
 
+```{r}
 
+```
 
