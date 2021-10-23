@@ -2,7 +2,6 @@
 title: "ST558 Project 2"
 author: "Aries Zhou"
 date: "10/19/2021"
-output: html_document
 ---
 
 ```{r, echo = FALSE, eval = FALSE}
@@ -22,6 +21,12 @@ List of packages used:
 ```{r}
 library(dplyr)
 library(tidyr)
+library(ggcorrplot)
+library(vcd)
+library(caret)
+library(class)
+library(randomForest)
+library(gbm)
 ```
 
 ### Data  
@@ -29,15 +34,64 @@ library(tidyr)
 ```{r}
 # import data
 pop <- read.csv("OnlineNewsPopularity.csv")
+anyNA(pop)
 
 # subset data on data channel of interest
 pop.life <- pop %>%
-  subset(data_channel_is_lifestyle == 1) %>% select(-starts_with("data_channel_is_"))
-View(pop.life)
+  subset(data_channel_is_lifestyle == 1) %>% select(-starts_with("data_channel_is_"), -1:-2)
+
+str(pop.life) 
 ```
 
 
+
+
+
 ### Summarizations  
+
+Some attempts   
+
+```{r}
+pop.life$weekday_is_monday <- as.factor(pop.life$weekday_is_monday)
+pop.life$weekday_is_tuesday <- as.factor(pop.life$weekday_is_tuesday)
+pop.life$weekday_is_wednesday <- as.factor(pop.life$weekday_is_wednesday)
+pop.life$weekday_is_thursday <- as.factor(pop.life$weekday_is_thursday)
+pop.life$weekday_is_friday <- as.factor(pop.life$weekday_is_friday)
+pop.life$weekday_is_saturday <- as.factor(pop.life$weekday_is_saturday)
+pop.life$weekday_is_sunday <- as.factor(pop.life$weekday_is_sunday)
+pop.life$is_weekend <- as.factor(pop.life$is_weekend)
+
+
+# check the counts of binary variables.
+pop.life.char <- pop.life %>% select(is.factor)
+str(pop.life.char)
+
+table(pop.life.char)
+
+pop.life.num <- select(pop.life, is.numeric) %>% mutate_all(~(scale(.) %>% as.vector)) 
+
+# check correlations
+cor <- round(cor(pop.life.num, use="complete.obs"), 2)
+
+# Consider all numeric variables.
+lm <- step(lm(shares ~ . , data = pop.life.num), direction = "backward")
+
+l.fit<- lm(lm$call[["formula"]], data = pop.life.num)
+summary(l.fit)
+
+lm$call[["formula"]]
+gsub("[+]", ",", lm$call[["formula"]])
+
+pop.life.num.s <- pop.life.num %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity)
+
+cor.selected <- round(cor(pop.life.num, use="complete.obs"), 2)
+
+
+ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
+
+```
+
+### Graphical summaries  
 
 ```{r}
 
