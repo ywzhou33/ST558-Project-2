@@ -61,6 +61,7 @@ pop.life$weekday_is_saturday <- as.factor(pop.life$weekday_is_saturday)
 pop.life$weekday_is_sunday <- as.factor(pop.life$weekday_is_sunday)
 pop.life$is_weekend <- as.factor(pop.life$is_weekend)
 
+summary(pop.life$shares)
 
 # check the counts of binary variables.
 pop.life.char <- pop.life %>% select(is.factor)
@@ -92,6 +93,29 @@ ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
 ```
 
 ### Graphical summaries  
+
+```{r}
+#pop.life.scale <- select(pop.life, is.numeric) %>% mutate_all(~(scale(.) %>% as.vector)) %>% cbind(select(pop.life, is.factor))
+
+#Scatterplot for n_tokens_content v.s. Shares.
+scatter <- ggplot(data = pop.life, aes(x = n_tokens_content, y = shares))
+scatter + geom_point(aes(color = is_weekend)) + 
+geom_smooth(method = lm) + 
+labs(title = "n_tokens_content v.s. Shares", x = "n_tokens_content", y = "shares") + 
+scale_color_discrete(name = "is_weekend")
+```
+
+Split the data set into training and testing set. Use p = 0.7.  
+
+```{r split.data}
+# set seed
+set.seed(234)
+
+train.index <- createDataPartition(y = pop.life$shares, p = 0.7, list = F)
+train <- pop.life[train.index, ] # training set
+test <- pop.life[-train.index, ] # test set
+```
+
 
 ```{r}
 
