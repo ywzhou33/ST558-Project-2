@@ -37,10 +37,10 @@ pop <- read.csv("OnlineNewsPopularity.csv")
 anyNA(pop)
 
 # subset data on data channel of interest
-pop.life <- pop %>%
+pop.data <- pop %>%
   subset(data_channel_is_lifestyle == 1) %>% select(-starts_with("data_channel_is_"), -1:-2)
 
-str(pop.life) 
+str(pop.data) 
 ```
 
 
@@ -52,40 +52,40 @@ str(pop.life)
 Some attempts   
 
 ```{r}
-pop.life$weekday_is_monday <- as.factor(pop.life$weekday_is_monday)
-pop.life$weekday_is_tuesday <- as.factor(pop.life$weekday_is_tuesday)
-pop.life$weekday_is_wednesday <- as.factor(pop.life$weekday_is_wednesday)
-pop.life$weekday_is_thursday <- as.factor(pop.life$weekday_is_thursday)
-pop.life$weekday_is_friday <- as.factor(pop.life$weekday_is_friday)
-pop.life$weekday_is_saturday <- as.factor(pop.life$weekday_is_saturday)
-pop.life$weekday_is_sunday <- as.factor(pop.life$weekday_is_sunday)
-pop.life$is_weekend <- as.factor(pop.life$is_weekend)
+pop.data$weekday_is_monday <- as.factor(pop.data$weekday_is_monday)
+pop.data$weekday_is_tuesday <- as.factor(pop.data$weekday_is_tuesday)
+pop.data$weekday_is_wednesday <- as.factor(pop.data$weekday_is_wednesday)
+pop.data$weekday_is_thursday <- as.factor(pop.data$weekday_is_thursday)
+pop.data$weekday_is_friday <- as.factor(pop.data$weekday_is_friday)
+pop.data$weekday_is_saturday <- as.factor(pop.data$weekday_is_saturday)
+pop.data$weekday_is_sunday <- as.factor(pop.data$weekday_is_sunday)
+pop.data$is_weekend <- as.factor(pop.data$is_weekend)
 
-summary(pop.life$shares)
+summary(pop.data$shares)
 
 # check the counts of binary variables.
-pop.life.char <- pop.life %>% select(is.factor)
-str(pop.life.char)
+pop.data.char <- pop.data %>% select(is.factor)
+str(pop.data.char)
 
-table(pop.life.char)
+table(pop.data.char)
 
-pop.life.num <- select(pop.life, is.numeric) %>% mutate_all(~(scale(.) %>% as.vector)) 
+pop.data.num <- select(pop.data, is.numeric) %>% mutate_all(~(scale(.) %>% as.vector)) 
 
 # check correlations
-cor <- round(cor(pop.life.num, use="complete.obs"), 2)
+cor <- round(cor(pop.data.num, use="complete.obs"), 2)
 
 # Consider all numeric variables.
-lm <- step(lm(shares ~ . , data = pop.life.num), direction = "backward")
+lm <- step(lm(shares ~ . , data = pop.data.num), direction = "backward")
 
-l.fit<- lm(lm$call[["formula"]], data = pop.life.num)
+l.fit<- lm(lm$call[["formula"]], data = pop.data.num)
 summary(l.fit)
 
 lm$call[["formula"]]
 gsub("[+]", ",", lm$call[["formula"]])
 
-pop.life.num.s <- pop.life.num %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity)
+pop.data.num.s <- pop.data.num %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity)
 
-cor.selected <- round(cor(pop.life.num, use="complete.obs"), 2)
+cor.selected <- round(cor(pop.data.num, use="complete.obs"), 2)
 
 
 ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
@@ -95,10 +95,8 @@ ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
 ### Graphical summaries  
 
 ```{r}
-#pop.life.scale <- select(pop.life, is.numeric) %>% mutate_all(~(scale(.) %>% as.vector)) %>% cbind(select(pop.life, is.factor))
-
 #Scatterplot for n_tokens_content v.s. Shares.
-scatter <- ggplot(data = pop.life, aes(x = n_tokens_content, y = shares))
+scatter <- ggplot(data = pop.data, aes(x = n_tokens_content, y = shares))
 scatter + geom_point(aes(color = is_weekend)) + 
 geom_smooth(method = lm) + 
 labs(title = "n_tokens_content v.s. Shares", x = "n_tokens_content", y = "shares") + 
@@ -111,13 +109,84 @@ Split the data set into training and testing set. Use p = 0.7.
 # set seed
 set.seed(234)
 
-train.index <- createDataPartition(y = pop.life$shares, p = 0.7, list = F)
-train <- pop.life[train.index, ] # training set
-test <- pop.life[-train.index, ] # test set
+train.index <- createDataPartition(y = pop.data$shares, p = 0.7, list = F)
+train <- pop.data[train.index, ] # training set
+test <- pop.data[-train.index, ] # test set
+
+#train.index<- sample(1:nrow(pop.data), size = nrow(pop.data) *0.7)
+#test.index<- dplyr::setdiff(1:nrow(pop.data), train)
+
+#train <- pop.data[train.index, ] # training set
+#test <- pop.data[test.index, ] # test set
 ```
 
+Linear Regression   
 
 ```{r}
+# Consider all numeric variables.
+lm1 <- step(lm(shares ~ . , data = train), direction = "backward")
+
+lm2 <- step(lm(lm1$call[["formula"]], data = train), scope = . ~.^2, direction = "both")
+lm2$call[["formula"]]
+ctrl <- trainControl(method = "cv", number = 5)
+
+lm.fit1 <- train(lm1$call[["formula"]], data = train, 
+                 method = "lm", preProcess =c("center", "scale"), 
+                 trControl = ctrl)
+lm.fit1$results[2:4]
+
+lm.fit2 <- train(lm2$call[["formula"]], data = train, 
+                 method = "lm", preProcess =c("center", "scale"), 
+                 trControl = ctrl)
+
+# create a table to compare the results of linear regression
+lm.compare <- data.frame(models= c("lm.fit1", "lm.fit2"), results = bind_rows(lm.fit1$results[2:4], lm.fit2$results[2:4]))
+knitr::kable(lm.compare) 
+
+#select the linear model with lowest RMSE. 
+lm.select <- lm.compare %>% filter(results.RMSE == min(results.RMSE))
+
+lm.select
+```
+
+Random Forest Model  
+
+```{r}
+# create dataframe for tuning parameter
+rf.tGrid <- expand.grid(mtry = seq(from = 1, to = 15, by = 1))
+
+# train the Random Forest model
+rf.fit1 <- train(lm1$call[["formula"]], data = train, 
+             method = "rf", trControl = ctrl, 
+             preProcess = c("center", "scale"), 
+             tuneGrid = rf.tGrid )
+
+rf.fit2 <- train(lm2$call[["formula"]], data = train, 
+             method = "rf", trControl = ctrl, 
+             preProcess = c("center", "scale"), 
+             tuneGrid = rf.tGrid )
+# create a table to compare the results of linear regression
+rf.compare <- data.frame(models= c("rf.fit1", "rf.fit2"), results = bind_rows(rf.fit1$results[2:4], rf.fit2$results[2:4]))
+knitr::kable(rf.compare) 
+
+#select the linear model with lowest RMSE. 
+rf.select <- rf.compare %>% filter(results.RMSE == min(results.RMSE))
+
+lm.select
+```
+
+Check model performance on test set   
+
+```{r}
+# check linear regression performance on test set 
+lm.p <- confusionMatrix(data = test$shares, 
+                        reference = predict(lm.fit2, newdata = test))
+lm.p
+
+# check random forest performance on test set 
+rf.p <- confusionMatrix(data = test$shares, 
+                        reference = predict(rf.fit2, newdata = test))
+rf.p
 
 ```
 
