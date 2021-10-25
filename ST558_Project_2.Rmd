@@ -15,7 +15,16 @@ rmarkdown::render("./ST558_Proj_1.Rmd",
 knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE, fig.align='center', fig.path = "./")
 ```
 
-### Introduction  
+## Introduction  
+
+### Description the data for this project 
+This is a R project using the exploratory data analysis and supervised statistical learning method to analyze a data set.  
+This data set is called __Online News Popularity Data Set__ and you can access the data set [here](https://archive.ics.uci.edu/ml/datasets/Online+News+Popularity)  
+There are lots of measurements/heterogeneous features of articles, including type of the data channel, number of images, number of videos, number of links, counts of words in the title/content, when it is published, summary statistics of polarity of positive/negative words and etc...  
+The __main goal__ of this project is to use those features/explanatory variables to predict the popularity(number of the shares in social networks)  
+Before conducting any method to fit the data with models, we want to do some exploratory data analysis (including some summary statistics and graphs) to visualize the data. And then, we will fit the data under regression setting as well as classification setting.  
+Supervised learning methods that will be used in this project include: linear regression, generalized linear model, logistic regression, random forest regression, random forest classification, boosted tree method, or any other method that we will find applicable through our discovering of the data.  
+
 
 List of packages used:  
 ```{r}
@@ -27,18 +36,29 @@ library(caret)
 library(class)
 library(randomForest)
 library(gbm)
+library(readr)
 ```
 
 ### Data  
 
 ```{r}
 # import data
-pop <- read.csv("OnlineNewsPopularity.csv")
+pop <- read_csv("OnlineNewsPopularity.csv")
+
 anyNA(pop)
 
+#convert the wide to long format (categorize data channel, and make them into one column)
+new <- pop %>% pivot_longer(cols = data_channel_is_lifestyle:data_channel_is_world, names_to = "channel",values_to = 'things') 
+new_data <- new %>% filter(things != 0) %>% select(-things) 
+pop.data2 <- new_data %>% subset(channel == 'data_channel_is_lifestyle') %>% select( -1:-2)
+
+#there are some observations that are not in the types of channel listed in the data set. 
+nrow(new_data)< nrow(pop)
+
+
+
 # subset data on data channel of interest
-pop.data <- pop %>%
-  subset(data_channel_is_lifestyle == 1) %>% select(-starts_with("data_channel_is_"), -1:-2)
+pop.data <- pop %>% subset(data_channel_is_lifestyle == 1) %>% select(-starts_with("data_channel_is_"), -1:-2)
 
 str(pop.data) 
 ```
@@ -62,6 +82,10 @@ pop.data$weekday_is_sunday <- as.factor(pop.data$weekday_is_sunday)
 pop.data$is_weekend <- as.factor(pop.data$is_weekend)
 
 summary(pop.data$shares)
+# or we can  merge those column in to one categorical variable. 
+
+
+
 
 # check the counts of binary variables.
 pop.data.char <- pop.data %>% select(is.factor)
@@ -90,6 +114,50 @@ cor.selected <- round(cor(pop.data.num, use="complete.obs"), 2)
 
 ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
 
+
+
+
+
+
+
+
+#summary statistics by Jiatao 
+#simple table displaying counts for different type of channel 
+table(new_data$channel) 
+#some summary stats grouped by channel 
+new_data %>% 
+    group_by( channel ) %>% 
+    summarise( percent = 100 * n() / nrow( new_data ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+
+
+
+# merge those weekday columns into one.
+Z <- new_data %>% pivot_longer(cols = weekday_is_monday:weekday_is_sunday, names_to = "weekday",values_to = 'whatever') 
+X <- Z %>% filter(whatever != 0) %>% select(-whatever) 
+table(X$weekday)
+X %>% 
+    group_by( weekday ) %>% 
+    summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+
+table(X$weekday, X$channel)
+
+
+#V <- ifelse(X$is_weekend == 0, "No","Yes")
+table(X$channel, X$is_weekend)
+
+X %>% group_by(is_weekend)%>% 
+    summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+
+
+
+
+
+
+
+
+
+
+
 ```
 
 ### Graphical summaries  
@@ -101,6 +169,64 @@ scatter + geom_point(aes(color = is_weekend)) +
 geom_smooth(method = lm) + 
 labs(title = "n_tokens_content v.s. Shares", x = "n_tokens_content", y = "shares") + 
 scale_color_discrete(name = "is_weekend")
+
+
+
+
+
+#some graphs 
+
+
+g <-ggplot(X,aes(x = channel))
+  g + 
+    geom_bar(aes(fill = as.factor(is_weekend)),
+               position = "dodge") + 
+    labs(x = "channel", y = "Count", title = "channel by weekend") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
+    scale_fill_discrete(name = "weekend") 
+
+  
+  
+  
+  
+  
+g<-ggplot(X,aes(x = channel,
+                       y = shares))
+  g + 
+    geom_boxplot(position = "dodge") + 
+    labs(x = "y",
+         title = "Boxplot for popularity with channel type ")+ 
+    scale_x_discrete(name = "channel")+ 
+    geom_jitter(aes(color = as.factor(weekday))) + 
+    scale_y_continuous() + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
+    scale_color_discrete(name = "y")
+  
+  
+  
+  
+  
+  
+  g<-ggplot(X,
+          aes(x = weekday))
+  g + 
+    geom_bar(aes(fill = as.factor(channel)),
+             position = "stack",show.legend = NA) + 
+    labs(x = "weekday")+ 
+    scale_fill_discrete(name = "channel") + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
+    labs(title = "weekday by channel ")
+  
+ # or  
+   g<-ggplot(X,
+          aes(x = channel))
+  g + 
+    geom_bar(aes(fill = as.factor(weekday)),
+             position = "stack",show.legend = NA) + 
+    labs(x = "channel")+ 
+    scale_fill_discrete(name = "weekday") + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
+    labs(title = " channel by weekday ")
 ```
 
 Split the data set into training and testing set. Use p = 0.7.  
