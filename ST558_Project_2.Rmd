@@ -117,6 +117,37 @@ ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
 
 
 
+# for the variable that can be used in the linear regression model. 
+# try best subset selection, adjusted R^2, and AIC, BIC,
+install.packages("leaps")
+library(leaps)
+ 
+final <- pop.data %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity,shares)
+
+
+train.index <- createDataPartition(y = final$shares, p = 0.7, list = F)
+train.sub <- final[train.index, ] # training set
+test.sub <- final[-train.index, ] # test set
+
+
+regression1 <- regsubsets(shares ~., data = train.sub,nvmax=12)
+hh1<-summary(regression1)
+
+
+par(mfrow=c(2,2))
+which.min(hh1$cp)
+plot(hh1$cp ,xlab="Number of Variables ",ylab="Cp", type='b')
+points (9,hh1$cp [9], col ="red",cex=2,pch =20)
+which.max(hh1$adjr2)
+plot(hh1$adjr2 ,xlab="Number of Variables ",ylab="Adjusted R^2 ", type='b')
+points (11,hh1$adjr2 [11], col ="red",cex=2,pch =20)
+which.min(hh1$bic)
+
+plot(hh1$bic ,xlab="Number of Variables ",ylab="BIC ", type='b')
+points (3,hh1$bic [3], col ="red",cex=2,pch =20)
+
+#for the linear regression, after using the best subset selection(including the backward selection), some important variables
+#n_tokens_content    n_non_stop_words   n_non_stop_unique_tokens num_videos   self_reference_min_shares  kw_avg_avg
 
 
 
@@ -163,7 +194,7 @@ X %>% group_by(is_weekend)%>%
 ### Graphical summaries  
 
 ```{r}
-#Scatterplot for n_tokens_content v.s. Shares.
+#Scatter plot for n_tokens_content v.s. Shares.
 scatter <- ggplot(data = pop.data, aes(x = n_tokens_content, y = shares))
 scatter + geom_point(aes(color = is_weekend)) + 
 geom_smooth(method = lm) + 
@@ -315,4 +346,55 @@ rf.p <- confusionMatrix(data = test$shares,
 rf.p
 
 ```
+
+
+```{r}
+set.seed(123)
+# using boosted tree 
+library(gbm)
+# boosted tree 
+tune1 = c(25,50,70,100)
+tune2 = c(1:10)
+tune3 = 0.1
+tune4= 10
+boostTreefit <- train(shares ~ ., data = train.sub, 
+                method = "gbm",
+                preProcess = c("center","scale"),
+              trControl = trainControl(method = "cv",number = 10),
+              tuneGrid = expand.grid(n.trees = tune1,interaction.depth = tune2,shrinkage= tune3,n.minobsinnode= tune4))
+
+plot(boostTreefit$results$n.trees, boostTreefit$results$RMSE, xlab = "n.trees",ylab = "RMSE",type = 'p',main = 'boosted')
+plot(boostTreefit$results$interaction.depth, boostTreefit$results$RMSE, xlab = "subtrees",ylab = "RMSE",type = 'p',main = 'boosted')
+plot(boostTreefit$results$interaction.depth, boostTreefit$results$Rsquared, xlab = "subtrees",ylab = "RMSE",type = 'p',main = 'boosted')
+
+
+tune1 = 25
+tune2 = 1
+tune3 = 0.1
+tune4= 10
+boostTreefit2 <- train(shares ~ ., data = train.sub, 
+                method = "gbm",
+                preProcess = c("center","scale"),
+              trControl = trainControl(method = "cv",number = 10),
+              tuneGrid = expand.grid(n.trees = tune1,interaction.depth = tune2,shrinkage= tune3,n.minobsinnode= tune4))
+pred <- predict(boostTreefit2, newdata = test.sub)
+
+test.MSE <- mean((pred - test.sub$shares)^2)
+
+
+
+
+
+
+
+
+
+
+
+```
+
+
+
+
+
 
