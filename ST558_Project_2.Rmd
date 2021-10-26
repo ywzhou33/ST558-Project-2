@@ -23,7 +23,7 @@ This data set is called __Online News Popularity Data Set__ and you can access t
 There are lots of measurements/heterogeneous features of articles, including type of the data channel, number of images, number of videos, number of links, counts of words in the title/content, when it is published, summary statistics of polarity of positive/negative words and etc...  
 The __main goal__ of this project is to use those features/explanatory variables to predict the popularity(number of the shares in social networks)  
 Before conducting any method to fit the data with models, we want to do some exploratory data analysis (including some summary statistics and graphs) to visualize the data. And then, we will fit the data under regression setting as well as classification setting.  
-Supervised learning methods that will be used in this project include: linear regression, generalized linear model, logistic regression, random forest regression, random forest classification, boosted tree method, or any other method that we will find applicable through our discovering of the data.  
+Supervised learning methods that will be used in this project include: linear regression, generalized linear model, logistic regression, random forest regression, random forest classification, boosted tree method, or any other method that we will find that could be applicable through our discovering of the data.  
 
 
 List of packages used:  
@@ -37,10 +37,12 @@ library(class)
 library(randomForest)
 library(gbm)
 library(readr)
+library(leaps)
 ```
+## Data Cleaning 
 
 ### Data  
-
+Read in data and combine certain numerical columns to a single column(categorical)  
 ```{r}
 # import data
 pop <- read_csv("OnlineNewsPopularity.csv")
@@ -51,6 +53,10 @@ anyNA(pop)
 new <- pop %>% pivot_longer(cols = data_channel_is_lifestyle:data_channel_is_world, names_to = "channel",values_to = 'things') 
 new_data <- new %>% filter(things != 0) %>% select(-things) 
 pop.data2 <- new_data %>% subset(channel == 'data_channel_is_lifestyle') %>% select( -1:-2)
+
+# merge those weekday columns into one.
+Z <- new_data %>% pivot_longer(cols = weekday_is_monday:weekday_is_sunday, names_to = "weekday",values_to = 'whatever') 
+X <- Z %>% filter(whatever != 0) %>% select(-whatever) 
 
 #there are some observations that are not in the types of channel listed in the data set. 
 nrow(new_data)< nrow(pop)
@@ -66,8 +72,8 @@ str(pop.data)
 
 
 
-
-### Summarizations  
+## Exploratory Data Analysis 
+### Summarizations And Graphs  
 
 Some attempts   
 
@@ -114,45 +120,14 @@ cor.selected <- round(cor(pop.data.num, use="complete.obs"), 2)
 
 ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
 
-
-
-
-# for the variable that can be used in the linear regression model. 
-# try best subset selection, adjusted R^2, and AIC, BIC,
-install.packages("leaps")
-library(leaps)
- 
-final <- pop.data %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity,shares)
-
-
-train.index <- createDataPartition(y = final$shares, p = 0.7, list = F)
-train.sub <- final[train.index, ] # training set
-test.sub <- final[-train.index, ] # test set
-
-
-regression1 <- regsubsets(shares ~., data = train.sub,nvmax=12)
-hh1<-summary(regression1)
-
-
-par(mfrow=c(2,2))
-which.min(hh1$cp)
-plot(hh1$cp ,xlab="Number of Variables ",ylab="Cp", type='b')
-points (9,hh1$cp [9], col ="red",cex=2,pch =20)
-which.max(hh1$adjr2)
-plot(hh1$adjr2 ,xlab="Number of Variables ",ylab="Adjusted R^2 ", type='b')
-points (11,hh1$adjr2 [11], col ="red",cex=2,pch =20)
-which.min(hh1$bic)
-
-plot(hh1$bic ,xlab="Number of Variables ",ylab="BIC ", type='b')
-points (3,hh1$bic [3], col ="red",cex=2,pch =20)
-
-#for the linear regression, after using the best subset selection(including the backward selection), some important variables
-#n_tokens_content    n_non_stop_words   n_non_stop_unique_tokens num_videos   self_reference_min_shares  kw_avg_avg
+```
 
 
 
 
-#summary statistics by Jiatao 
+Some tables containing grouped by channel and weekday
+```{r}
+#summary statistics 
 #simple table displaying counts for different type of channel 
 table(new_data$channel) 
 #some summary stats grouped by channel 
@@ -162,9 +137,7 @@ new_data %>%
 
 
 
-# merge those weekday columns into one.
-Z <- new_data %>% pivot_longer(cols = weekday_is_monday:weekday_is_sunday, names_to = "weekday",values_to = 'whatever') 
-X <- Z %>% filter(whatever != 0) %>% select(-whatever) 
+# using the data set containing weekday info in one column. 
 table(X$weekday)
 X %>% 
     group_by( weekday ) %>% 
@@ -180,15 +153,6 @@ X %>% group_by(is_weekend)%>%
     summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
 
 
-
-
-
-
-
-
-
-
-
 ```
 
 ### Graphical summaries  
@@ -200,11 +164,11 @@ scatter + geom_point(aes(color = is_weekend)) +
 geom_smooth(method = lm) + 
 labs(title = "n_tokens_content v.s. Shares", x = "n_tokens_content", y = "shares") + 
 scale_color_discrete(name = "is_weekend")
+```
 
 
-
-
-
+This is a bar plot channel by weekend(is or not) 
+```{r}
 #some graphs 
 
 
@@ -215,12 +179,11 @@ g <-ggplot(X,aes(x = channel))
     labs(x = "channel", y = "Count", title = "channel by weekend") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
     scale_fill_discrete(name = "weekend") 
-
+```
   
   
-  
-  
-  
+  This is a boxplot for different channels
+```{r}  
 g<-ggplot(X,aes(x = channel,
                        y = shares))
   g + 
@@ -232,12 +195,12 @@ g<-ggplot(X,aes(x = channel,
     scale_y_continuous() + 
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
     scale_color_discrete(name = "y")
+```  
   
   
   
-  
-  
-  
+  This is the bar plot : channel by weekday(stacked bar)
+```{r}  
   g<-ggplot(X,
           aes(x = weekday))
   g + 
@@ -260,8 +223,11 @@ g<-ggplot(X,aes(x = channel,
     labs(title = " channel by weekday ")
 ```
 
-Split the data set into training and testing set. Use p = 0.7.  
 
+## Modeling 
+
+### Regression Settings
+Split the data set into training and testing set. Use p = 0.7.  
 ```{r split.data}
 # set seed
 set.seed(234)
@@ -277,8 +243,45 @@ test <- pop.data[-train.index, ] # test set
 #test <- pop.data[test.index, ] # test set
 ```
 
-Linear Regression   
+###Linear Regression   
 
+Before fitting any predictive models, we tried some methods that could help reduce the dimension of data.  
+We randomly selected some predictors of interest and perform the best subset selection under the condition of least square linear regression.  
+```{r}
+
+# for the variable that can be used in the linear regression model. 
+# try best subset selection, select number of variables using adjusted R^2, and mallow's cp, BIC,
+ 
+final <- pop.data %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_imgs,num_keywords, num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess ,global_rate_positive_words,rate_positive_words, abs_title_subjectivity,abs_title_sentiment_polarity,shares)
+
+
+train.index.sub <- createDataPartition(y = final$shares, p = 0.7, list = F)
+train.sub <- final[train.index, ] # training set
+test.sub <- final[-train.index, ] # test set
+
+
+regression1 <- regsubsets(shares ~., data = train.sub,nvmax=17)
+hh1<-summary(regression1)
+
+
+par(mfrow=c(2,2))
+which.min(hh1$cp)
+plot(hh1$cp ,xlab="Number of Variables ",ylab="Cp", type='b')
+points (9,hh1$cp [9], col ="red",cex=2,pch =20)
+which.max(hh1$adjr2)
+plot(hh1$adjr2 ,xlab="Number of Variables ",ylab="Adjusted R^2 ", type='b')
+points (13,hh1$adjr2 [13], col ="red",cex=2,pch =20)
+which.min(hh1$bic)
+plot(hh1$bic,xlab="Number of Variables ",ylab="BIC ", type='b')
+points (3,hh1$bic [3], col ="red",cex=2,pch =20)
+
+#for the linear regression, after using the best subset selection, some important variables are 
+#n_tokens_content num_videos   n_non_stop_words   n_non_stop_unique_tokens    self_reference_min_shares  kw_avg_avg  abs_title_subjectivity  kw_max_avg
+```
+
+
+
+Using all predictors, predictors chosen from backward selection, and best subset selection to fit the linear model.  
 ```{r}
 # Consider all numeric variables.
 lm1 <- step(lm(shares ~ . , data = train), direction = "backward")
@@ -296,17 +299,26 @@ lm.fit2 <- train(lm2$call[["formula"]], data = train,
                  method = "lm", preProcess =c("center", "scale"), 
                  trControl = ctrl)
 
+#check the model selected by the best subset selection 
+lm.fit3 <- train(shares ~ n_tokens_content +num_videos+n_non_stop_words+n_non_stop_unique_tokens + self_reference_min_shares +kw_avg_avg + abs_title_subjectivity + kw_max_avg,
+                 data = train,
+                 method = "lm", preProcess =c("center", "scale"), 
+                 trControl = ctrl)
+
 # create a table to compare the results of linear regression
-lm.compare <- data.frame(models= c("lm.fit1", "lm.fit2"), results = bind_rows(lm.fit1$results[2:4], lm.fit2$results[2:4]))
+lm.compare <- data.frame(models= c("lm.fit1", "lm.fit2","lm.fit3"), results = bind_rows(lm.fit1$results[2:4], lm.fit2$results[2:4], lm.fit3$results[2:4]))
 knitr::kable(lm.compare) 
 
 #select the linear model with lowest RMSE. 
 lm.select <- lm.compare %>% filter(results.RMSE == min(results.RMSE))
 
 lm.select
+
+pred.lm <- predict(lm.fit3, newdata = test.sub)
+test.MSE.lm <- mean((pred.lm - test.sub$shares)^2)
 ```
 
-Random Forest Model  
+###Random Forest Regression  
 
 ```{r}
 # create dataframe for tuning parameter
@@ -347,10 +359,20 @@ rf.p
 
 ```
 
-
+### Boosting model. 
 ```{r}
 set.seed(123)
-# using boosted tree 
+
+# using boosted method 
+
+
+#final <- pop.data %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity,shares)
+
+
+#train.index <- createDataPartition(y = final$shares, p = 0.7, list = F)
+#train.sub <- final[train.index, ] # training set
+#test.sub <- final[-train.index, ] # test set
+
 library(gbm)
 # boosted tree 
 tune1 = c(25,50,70,100)
@@ -377,9 +399,9 @@ boostTreefit2 <- train(shares ~ ., data = train.sub,
                 preProcess = c("center","scale"),
               trControl = trainControl(method = "cv",number = 10),
               tuneGrid = expand.grid(n.trees = tune1,interaction.depth = tune2,shrinkage= tune3,n.minobsinnode= tune4))
-pred <- predict(boostTreefit2, newdata = test.sub)
+pred.boost <- predict(boostTreefit2, newdata = test.sub)
 
-test.MSE <- mean((pred - test.sub$shares)^2)
+test.MSE.boost <- mean((pred - test.sub$shares)^2)
 
 
 
