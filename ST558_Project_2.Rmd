@@ -127,7 +127,7 @@ ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
 
 
 
-Some tables containing grouped by channel and weekday
+Some tables showing the counts and percentage grouped by channel and weekday
 ```{r}
 #summary statistics 
 #simple table displaying counts for different type of channel 
@@ -169,7 +169,8 @@ scale_color_discrete(name = "is_weekend")
 ```
 
 
-This is a bar plot channel by weekend(is or not) 
+This is a bar plot channel by weekend(is or not)  
+We can see from the plot that weekend shares far more less than the shares that is not on weekend  
 ```{r}
 #some graphs 
 
@@ -184,7 +185,8 @@ g <-ggplot(X,aes(x = channel))
 ```
   
   
-  This is a boxplot for different channels
+  Boxplot for different channels  
+  There are some outliers of shares in certain channels. 
 ```{r}  
 g<-ggplot(X,aes(x = channel,
                        y = shares))
@@ -196,7 +198,7 @@ g<-ggplot(X,aes(x = channel,
     geom_jitter(aes(color = as.factor(weekday))) + 
     scale_y_continuous() + 
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
-    scale_color_discrete(name = "y")
+    scale_color_discrete(name = "weekday")
 ```  
   
   
@@ -321,8 +323,6 @@ test.MSE.lm <- mean((pred.lm - test.sub$shares)^2)
 ```
 ### Lasso Regression 
 Since lasso perform the variable selection, we tried to use Lasso Regression(adding tuning parameter/ penalty) 
-
-
 ```{r}
 library(Matrix)
 library(glmnet)
@@ -339,6 +339,8 @@ print(lasso.coef.full)
 
 lasso.pred.full <- predict(lasso.fit.full, newx= as.matrix(test[,-15]))
 lasso.full.MSE <- mean((lasso.pred.full - test$shares)^2)
+
+sqrt(lasso.full.MSE)
 
 
 
@@ -360,6 +362,7 @@ print(lasso.coef)
 
 lasso.pred <- predict(lasso.fit, newx= as.matrix(test.sub[,-13]))
 lasso.MSE <- mean((lasso.pred - test.sub$shares)^2)
+sqrt(lasso.MSE)
 
 
 
@@ -455,6 +458,18 @@ boostTreefit2 <- train(shares ~ ., data = train.sub,
 pred.boost <- predict(boostTreefit2, newdata = test.sub)
 
 test.MSE.boost <- mean((pred.boost - test.sub$shares)^2)
+sqrt(test.MSE.boost)
+
+
+
+
+```
+
+```{r}
+all.compare <- data.frame(models= c("lm.fit1", "lm.fit2","lm.fit3","lasso.full.fit","lasso.12.fit","randomForest.fit","boost.fit"), results = rbind(lm.fit1$results[2], lm.fit2$results[2], lm.fit3$results[2],sqrt(lasso.full.MSE),sqrt(lasso.MSE),",,,",sqrt(test.MSE.boost)))
+knitr::kable(all.compare) 
+
+
 
 
 
@@ -462,9 +477,3 @@ test.MSE.boost <- mean((pred.boost - test.sub$shares)^2)
 
 
 ```
-
-
-
-
-
-
