@@ -22,8 +22,8 @@ This is a R project using the exploratory data analysis and supervised statistic
 This data set is called __Online News Popularity Data Set__ and you can access the data set [here](https://archive.ics.uci.edu/ml/datasets/Online+News+Popularity)  
 There are lots of measurements/heterogeneous features of articles, including type of the data channel, number of images, number of videos, number of links, counts of words in the title/content, when it is published, summary statistics of polarity of positive/negative words and etc...  
 The __main goal__ of this project is to use those features/explanatory variables to predict the popularity(number of the shares in social networks)  
-Before conducting any method to fit the data with models, we want to do some exploratory data analysis (including some summary statistics and graphs) to visualize the data. And then, we will fit the data under regression setting as well as classification setting.  
-Supervised learning methods that will be used in this project include: linear regression, generalized linear model, logistic regression, random forest regression, random forest classification, boosted tree method, or any other method that we will find that could be applicable through our discovering of the data.  
+Before conducting any method to fit the data with models, we want to do some exploratory data analysis (including some summary statistics and graphs) to visualize the data. And then, we will fit the data under regression setting. 
+Supervised learning methods that will be used in this project include: linear regression, generalized linear model, lasso regression, random forest regression, random forest classification, boosted method, or any other method that we will find that could be applicable through our discovering of the data.  
 
 
 List of packages used:  
@@ -54,11 +54,12 @@ anyNA(pop)
 #convert the wide to long format (categorize data channel, and make them into one column)
 new <- pop %>% pivot_longer(cols = data_channel_is_lifestyle:data_channel_is_world, names_to = "channel",values_to = 'things') 
 new_data <- new %>% filter(things != 0) %>% select(-things) 
-pop.data2 <- new_data %>% subset(channel == 'data_channel_is_lifestyle') %>% select( -1:-2)
+#pop.data2 <- new_data %>% subset(channel == 'data_channel_is_lifestyle') %>% select( -1:-2)
 
 # merge those weekday columns into one.
 Z <- new_data %>% pivot_longer(cols = weekday_is_monday:weekday_is_sunday, names_to = "weekday",values_to = 'whatever') 
 X <- Z %>% filter(whatever != 0) %>% select(-whatever) 
+pop.data2 <- X %>% subset(channel == 'data_channel_is_lifestyle') %>% select( -1:-2)
 
 #there are some observations that are not in the types of channel listed in the data set. 
 nrow(new_data)< nrow(pop)
@@ -127,31 +128,31 @@ ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
 
 
 
-Some tables showing the counts and percentage grouped by channel and weekday
+Some tables for selected dta channel of interest showing the counts and percentage grouped by channel and weekday  
 ```{r}
 #summary statistics 
-#simple table displaying counts for different type of channel 
-table(new_data$channel) 
+#simple table displaying counts for different type of channel (all obs)
+table(X$channel) 
 #some summary stats grouped by channel 
-new_data %>% 
+X %>% 
     group_by( channel ) %>% 
     summarise( percent = 100 * n() / nrow( new_data ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
 
 
 
-# using the data set containing weekday info in one column. 
-table(X$weekday)
-X %>% 
+# using the subset data set containing weekday info in one column. 
+table(pop.data2$weekday)
+pop.data2 %>% 
     group_by( weekday ) %>% 
     summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
 
-table(X$weekday, X$channel)
+table(pop.data2$weekday, pop.data2$channel)
 
 
 #V <- ifelse(X$is_weekend == 0, "No","Yes")
-table(X$channel, X$is_weekend)
+table(pop.data2$channel, pop.data2$is_weekend)
 
-X %>% group_by(is_weekend)%>% 
+pop.data2 %>% group_by(is_weekend)%>% 
     summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
 
 
@@ -162,13 +163,36 @@ X %>% group_by(is_weekend)%>%
 ```{r}
 #Scatter plot for n_tokens_content v.s. Shares.
 scatter <- ggplot(data = pop.data, aes(x = n_tokens_content, y = shares))
-scatter + geom_point(aes(color = is_weekend)) + 
+scatter + geom_point(aes(color = as.factor(is_weekend))) + 
 geom_smooth(method = lm) + 
 labs(title = "n_tokens_content v.s. Shares", x = "n_tokens_content", y = "shares") + 
 scale_color_discrete(name = "is_weekend")
+
+
+
+
+
+g<-ggplot(pop.data2,aes(x = num_videos, 
+                       y =shares))
+  g + 
+    geom_point(aes(shape = as.factor(is_weekend),
+                   color = as.factor(weekday)),
+               size = 2) + 
+    geom_smooth(method = lm) + 
+    labs(x = "Videos", 
+         y = "shares",
+         title = "Videos vs Shares ")+  
+    scale_shape_manual(values = c(3:4))+
+    scale_color_discrete(name = "weekday")+
+    scale_shape_discrete(name="is.weekend")
+
+
+
+
+
 ```
 
-
+#### General plots 
 This is a bar plot channel by weekend(is or not)  
 We can see from the plot that weekend shares far more less than the shares that is not on weekend  
 ```{r}
@@ -417,7 +441,6 @@ rf.p
 
 ### Boosting model.(Stochastic Gradient Boosting) 
 ```{r}
-set.seed(123)
 
 # using boosted method 
 
@@ -464,7 +487,15 @@ sqrt(test.MSE.boost)
 
 
 ```
-
+### Discussion and Model Selection 
+lm.fit1 is using backward selection to select varaibles of most interest.  
+lm.fit2 is adding the interaction terms to the model fitting  
+im.fit3 is chosen by the best subset selection  
+lasso.full.fit is using the lasso regression to fit the model(it also perform varaible selection)  
+random forest.fit   
+boost.fit is using cross validation to select appropriate tuning parameter for the boosted model and use it for prediction.  
+This is a simple table containing these methods and the Root Mean Square Error for each model fitting.  
+Lasso perform best in this situation.  
 ```{r}
 all.compare <- data.frame(models= c("lm.fit1", "lm.fit2","lm.fit3","lasso.full.fit","lasso.12.fit","randomForest.fit","boost.fit"), results = rbind(lm.fit1$results[2], lm.fit2$results[2], lm.fit3$results[2],sqrt(lasso.full.MSE),sqrt(lasso.MSE),",,,",sqrt(test.MSE.boost)))
 knitr::kable(all.compare) 
