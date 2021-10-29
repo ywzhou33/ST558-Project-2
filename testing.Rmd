@@ -1,0 +1,101 @@
+---
+title: "ST558 Project 2"
+author: "Aries Zhou"
+date: "10/19/2021"
+params: 
+  channel: "data_channel_is_lifestyle"
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.align='center', fig.path = "./")
+
+```
+
+
+```{r, include = TRUE}
+# import data
+pop <- read_csv("OnlineNewsPopularity.csv")
+
+anyNA(pop)
+
+#convert the wide to long format (categorize data channel, and make them into one column)
+new <- pop %>% pivot_longer(cols = data_channel_is_lifestyle:data_channel_is_world, names_to = "channel",values_to = 'things') 
+new_data <- new %>% filter(things != 0) %>% select(-things) 
+#pop.data2 <- new_data %>% subset(channel == 'data_channel_is_lifestyle') %>% select( -1:-2)
+
+# merge those weekday columns into one.
+Z <- new_data %>% pivot_longer(cols = weekday_is_monday:weekday_is_sunday, names_to = "weekday",values_to = 'whatever') 
+X <- Z %>% filter(whatever != 0) %>% select(-whatever) 
+pop.data2 <- X %>% filter(channel == params$channel) %>% select( -1:-2)
+
+#there are some observations that are not in the types of channel listed in the data set. 
+nrow(new_data)< nrow(pop)
+
+
+
+# subset data on data channel of interest
+pop.data <- pop %>% subset(data_channel_is_lifestyle == 1) %>% select(-starts_with("data_channel_is_"), -1:-2)
+
+#str(pop.data) 
+```
+
+
+
+
+```{r, include = TRUE, eval = TRUE}
+#summary statistics 
+#simple table displaying counts for different type of channel (all obs)
+table(X$channel) 
+#some summary stats grouped by channel 
+C1<- X %>% 
+    group_by( channel ) %>% 
+    summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+knitr::kable(C1)
+```
+
+```{r}
+# using the subset data set containing weekday info in one column. 
+table(pop.data2$weekday)
+C2<- pop.data2 %>% 
+    group_by( weekday ) %>% 
+    summarise( percent = 100 * n() / nrow( pop.data2 ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+knitr::kable(C2)
+
+table(pop.data2$weekday, pop.data2$channel)
+```
+
+
+```{r}
+#V <- ifelse(X$is_weekend == 0, "No","Yes")
+table(pop.data2$channel, pop.data2$is_weekend)
+
+C3<- pop.data2 %>% group_by(is_weekend)%>% 
+    summarise( percent = 100 * n() / nrow( pop.data2 ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+
+knitr::kable(C3)
+
+
+```
+
+
+```{r, eval = FALSE}
+channelIDs <- unique(X$channel)
+output_file <- paste0(channelIDs,".html")
+
+params = lapply(channelIDs, FUN = function(x){list(channel= x)})
+
+reports <- tibble(output_file, params)
+
+library(rmarkdown)
+apply(reports, MARGIN = 1,
+      FUN = function(x){
+        render(input = "./testing.Rmd",output_file = x[[1]], params = x[[2]])
+      })
+
+
+
+
+
+```
