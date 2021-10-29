@@ -1,14 +1,13 @@
 ---
 title: "ST558 Project 2"
-author: "Aries Zhou"
+author: "Aries Zhou, Jiatao Wang"
 date: "10/19/2021"
 ---
 
 ```{r, echo = FALSE, eval = FALSE}
-rmarkdown::render("./ST558_Proj_1.Rmd", 
+rmarkdown::render("./ST558_Project_2.Rmd",
                   output_format = "github_document", 
-                  output_dir = "./",
-                  output_options = list(html_preview = FALSE, keep_html=FALSE))
+                  output_dir = "./")
 ```
 
 ```{r setup, include=FALSE}
@@ -17,7 +16,7 @@ knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message = FALSE, warning = FALS
 
 ## Introduction  
 
-### Description the data for this project 
+### Description of the data for this project 
 This is a R project using the exploratory data analysis and supervised statistical learning method to analyze a data set.  
 This data set is called __Online News Popularity Data Set__ and you can access the data set [here](https://archive.ics.uci.edu/ml/datasets/Online+News+Popularity)  
 There are lots of measurements/heterogeneous features of articles, including type of the data channel, number of images, number of videos, number of links, counts of words in the title/content, when it is published, summary statistics of polarity of positive/negative words and etc...  
@@ -40,6 +39,7 @@ library(readr)
 library(leaps)
 library(Matrix)
 library(glmnet)
+library(rmarkdown)
 ```
 ## Data Cleaning 
 
@@ -59,17 +59,15 @@ new_data <- new %>% filter(things != 0) %>% select(-things)
 # merge those weekday columns into one.
 Z <- new_data %>% pivot_longer(cols = weekday_is_monday:weekday_is_sunday, names_to = "weekday",values_to = 'whatever') 
 X <- Z %>% filter(whatever != 0) %>% select(-whatever) 
-pop.data2 <- X %>% subset(channel == 'data_channel_is_lifestyle') %>% select( -1:-2)
+pop.data2 <- X %>% subset(channel == "data_channel_is_lifestyle") %>% select( -1:-2) 
+pop.data2$weekday <- as.factor(pop.data2$weekday)
+str(pop.data2) 
 
 #there are some observations that are not in the types of channel listed in the data set. 
 nrow(new_data)< nrow(pop)
 
-
-
 # subset data on data channel of interest
-pop.data <- pop %>% subset(data_channel_is_lifestyle == 1) %>% select(-starts_with("data_channel_is_"), -1:-2)
-
-str(pop.data) 
+#pop.data <- pop %>% subset(data_channel_is_lifestyle == 1) %>% select(-starts_with("data_channel_is_"), -1:-2)
 ```
 
 
@@ -78,57 +76,7 @@ str(pop.data)
 ## Exploratory Data Analysis 
 ### Summarizations And Graphs  
 
-Some attempts   
-
-```{r}
-pop.data$weekday_is_monday <- as.factor(pop.data$weekday_is_monday)
-pop.data$weekday_is_tuesday <- as.factor(pop.data$weekday_is_tuesday)
-pop.data$weekday_is_wednesday <- as.factor(pop.data$weekday_is_wednesday)
-pop.data$weekday_is_thursday <- as.factor(pop.data$weekday_is_thursday)
-pop.data$weekday_is_friday <- as.factor(pop.data$weekday_is_friday)
-pop.data$weekday_is_saturday <- as.factor(pop.data$weekday_is_saturday)
-pop.data$weekday_is_sunday <- as.factor(pop.data$weekday_is_sunday)
-pop.data$is_weekend <- as.factor(pop.data$is_weekend)
-
-summary(pop.data$shares)
-# or we can  merge those column in to one categorical variable. 
-
-
-
-
-# check the counts of binary variables.
-pop.data.char <- pop.data %>% select(is.factor)
-str(pop.data.char)
-
-table(pop.data.char)
-
-pop.data.num <- select(pop.data, is.numeric) %>% mutate_all(~(scale(.) %>% as.vector)) 
-
-# check correlations
-cor <- round(cor(pop.data.num, use="complete.obs"), 2)
-
-# Consider all numeric variables.
-lm <- step(lm(shares ~ . , data = pop.data.num), direction = "backward")
-
-l.fit<- lm(lm$call[["formula"]], data = pop.data.num)
-summary(l.fit)
-
-lm$call[["formula"]]
-gsub("[+]", ",", lm$call[["formula"]])
-
-pop.data.num.s <- pop.data.num %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity)
-
-cor.selected <- round(cor(pop.data.num, use="complete.obs"), 2)
-
-
-ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
-
-```
-
-
-
-
-Some tables for selected dta channel of interest showing the counts and percentage grouped by channel and weekday  
+Some tables for selected data channel of interest showing the counts and percentage grouped by channel and weekday  
 ```{r}
 #summary statistics 
 #simple table displaying counts for different type of channel (all obs)
@@ -142,6 +90,7 @@ X %>%
 
 # using the subset data set containing weekday info in one column. 
 table(pop.data2$weekday)
+
 pop.data2 %>% 
     group_by( weekday ) %>% 
     summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
@@ -162,7 +111,7 @@ pop.data2 %>% group_by(is_weekend)%>%
 
 ```{r}
 #Scatter plot for n_tokens_content v.s. Shares.
-scatter <- ggplot(data = pop.data, aes(x = n_tokens_content, y = shares))
+scatter <- ggplot(data = pop.data2, aes(x = n_tokens_content, y = shares))
 scatter + geom_point(aes(color = as.factor(is_weekend))) + 
 geom_smooth(method = lm) + 
 labs(title = "n_tokens_content v.s. Shares", x = "n_tokens_content", y = "shares") + 
@@ -257,12 +206,14 @@ g<-ggplot(X,aes(x = channel,
 ### Regression Settings
 Split the data set into training and testing set. Use p = 0.7.  
 ```{r split.data}
+
+pop.data2 <- X %>% subset(channel == "data_channel_is_lifestyle") %>% select( -1:-2, -49) 
 # set seed
 set.seed(234)
 
-train.index <- createDataPartition(y = pop.data$shares, p = 0.7, list = F)
-train <- pop.data[train.index, ] # training set
-test <- pop.data[-train.index, ] # test set
+train.index <- createDataPartition(y = pop.data2$shares, p = 0.7, list = F)
+train <- pop.data2[train.index, ] # training set
+test <- pop.data2[-train.index, ] # test set
 
 #train.index<- sample(1:nrow(pop.data), size = nrow(pop.data) *0.7)
 #test.index<- dplyr::setdiff(1:nrow(pop.data), train)
@@ -280,12 +231,12 @@ We randomly selected some predictors of interest and perform the best subset sel
 # for the variable that can be used in the linear regression model. 
 # try best subset selection, select number of variables using adjusted R^2, and mallow's cp, BIC,
  
-final <- pop.data %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_imgs,num_keywords, num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess ,global_rate_positive_words,rate_positive_words, abs_title_subjectivity,abs_title_sentiment_polarity,shares)
+final <- pop.data2 %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_imgs,num_keywords, num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess ,global_rate_positive_words,rate_positive_words, abs_title_subjectivity,abs_title_sentiment_polarity,shares)
 
 
 train.index.sub <- createDataPartition(y = final$shares, p = 0.7, list = F)
-train.sub <- final[train.index, ] # training set
-test.sub <- final[-train.index, ] # test set
+train.sub <- final[train.index.sub, ] # training set
+test.sub <- final[-train.index.sub, ] # test set
 
 
 regression1 <- regsubsets(shares ~., data = train.sub,nvmax=17)
@@ -310,12 +261,13 @@ points (3,hh1$bic [3], col ="red",cex=2,pch =20)
 
 
 Using all predictors, predictors chosen from backward selection, and best subset selection to fit the linear model.  
-```{r}
+```{r, eval=FALSE}
 # Consider all numeric variables.
 lm1 <- step(lm(shares ~ . , data = train), direction = "backward")
 
 lm2 <- step(lm(lm1$call[["formula"]], data = train), scope = . ~.^2, direction = "both")
 lm2$call[["formula"]]
+
 ctrl <- trainControl(method = "cv", number = 5)
 
 lm.fit1 <- train(lm1$call[["formula"]], data = train, 
@@ -341,10 +293,22 @@ knitr::kable(lm.compare)
 lm.select <- lm.compare %>% filter(results.RMSE == min(results.RMSE))
 
 lm.select
-
-pred.lm <- predict(lm.fit3, newdata = test.sub)
-test.MSE.lm <- mean((pred.lm - test.sub$shares)^2)
 ```
+
+```{r}
+predictions <- lm(as.symbol(lm.select[[1]]), data = train) %>% predict(test)
+
+knitr::kable(data.frame( R2 = R2(predictions, test$shares),
+                         RMSE = RMSE(predictions, test$shares),
+                         MAE = MAE(predictions, test$shares)))
+sum.results <- data.frame(Data = c("Train", "Test"), 
+                          Rsquared = c(lm.select[[3]], R2(predictions, test$shares)),
+                          RMSE = c(lm.select[[2]], RMSE(predictions, test$shares)),
+                          MAE = c(lm.select[[4]], MAE(predictions, test$shares)))
+
+knitr::kable(sum.results)
+```
+
 ### Lasso Regression 
 Since lasso perform the variable selection, we tried to use Lasso Regression(adding tuning parameter/ penalty) 
 ```{r}
@@ -400,7 +364,7 @@ sqrt(lasso.MSE)
 
 ###Random Forest Regression  
 
-```{r}
+```{r, eval=FALSE}
 # create dataframe for tuning parameter
 rf.tGrid <- expand.grid(mtry = seq(from = 1, to = 15, by = 1))
 
@@ -414,6 +378,7 @@ rf.fit2 <- train(lm2$call[["formula"]], data = train,
              method = "rf", trControl = ctrl, 
              preProcess = c("center", "scale"), 
              tuneGrid = rf.tGrid )
+
 # create a table to compare the results of linear regression
 rf.compare <- data.frame(models= c("rf.fit1", "rf.fit2"), results = bind_rows(rf.fit1$results[2:4], rf.fit2$results[2:4]))
 knitr::kable(rf.compare) 
@@ -422,21 +387,6 @@ knitr::kable(rf.compare)
 rf.select <- rf.compare %>% filter(results.RMSE == min(results.RMSE))
 
 lm.select
-```
-
-Check model performance on test set   
-
-```{r}
-# check linear regression performance on test set 
-lm.p <- confusionMatrix(data = test$shares, 
-                        reference = predict(lm.fit2, newdata = test))
-lm.p
-
-# check random forest performance on test set 
-rf.p <- confusionMatrix(data = test$shares, 
-                        reference = predict(rf.fit2, newdata = test))
-rf.p
-
 ```
 
 ### Boosting model.(Stochastic Gradient Boosting) 
@@ -496,7 +446,8 @@ random forest.fit
 boost.fit is using cross validation to select appropriate tuning parameter for the boosted model and use it for prediction.  
 This is a simple table containing these methods and the Root Mean Square Error for each model fitting.  
 Lasso perform best in this situation.  
-```{r}
+
+```{r, eval=FALSE}
 all.compare <- data.frame(models= c("lm.fit1", "lm.fit2","lm.fit3","lasso.full.fit","lasso.12.fit","randomForest.fit","boost.fit"), results = rbind(lm.fit1$results[2], lm.fit2$results[2], lm.fit3$results[2],sqrt(lasso.full.MSE),sqrt(lasso.MSE),",,,",sqrt(test.MSE.boost)))
 knitr::kable(all.compare) 
 
@@ -512,18 +463,18 @@ knitr::kable(all.compare)
 
 ### Automation of data_channel is***
 
-```{r}
-channels <- unique(X$channel)
-output_file <- paste0(channels,".html")
-
-params = lapply(channels, FUN = function(x){list(channel = x)})
-
+```{r, eval = FALSE}
+channelIDs <- unique(X$channel)
+output_file <- paste0(channelIDs,".html")
+params = lapply(channelIDs, FUN = function(x){list(channel= x)})
 reports <- tibble(output_file, params)
+library(rmarkdown)
 
-
-
-
-
+apply(reports, MARGIN = 1,
+      FUN = function(x){
+        render(input = "./testing.Rmd",output_file = x[[1]], params = x[[2]])
+      })
+```
 
 
 
