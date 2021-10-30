@@ -586,7 +586,7 @@ knitr::kable(all.compare)
 We need to read in libraries as well as some data set before knitting the automation part. 
 ```{r, eval = FALSE}
 channels <- unique(X$channel)
-output_file <- paste0(channels,".html")
+output_file <- paste0(channels,".md")
 
 params = lapply(channels, FUN = function(x){list(channel = x)})
 
@@ -596,6 +596,9 @@ library(rmarkdown)
 
 apply(reports, MARGIN = 1,
       FUN = function(x){
-        render(input = "./ST558_Project_2.Rmd",output_file = x[[1]], params = x[[2]])
+        render(input = "./ST558_Project_2.Rmd",
+               output_format = "github_document", 
+               output_file = x[[1]], 
+               params = x[[2]])
       })
 ```
