@@ -115,7 +115,7 @@ pop.data.num <- select(pop.data, is.numeric) %>% mutate_all(~(scale(.) %>% as.ve
 cor <- round(cor(pop.data.num, use="complete.obs"), 2)
 ```
 
-```{r, echo=FALSE,results='hide'}
+```{r, echo=TRUE,results='hide'}
 # Consider all numeric variables.
 lm <- step(lm(shares ~ . , data = pop.data.num), direction = "backward")
 ```
@@ -358,7 +358,7 @@ best_subset_model <- get_model_formula(which.min(hh1$cp),models,"shares")
 
 
 Since using all predictors is time-consuming and hard to render in automation, we use the random selected variables(p = 17) :predictors chosen from backward selection, and best subset selection to fit the linear model.  
-```{r lm, echo = FALSE, results='hide'}
+```{r lm, results='hide'}
 # Consider all numeric variables.
 lm1 <- step(lm(shares ~ . , data = train.sub), direction = "backward",use.start = TRUE)
 
@@ -467,7 +467,7 @@ test.MSE.lasso.partial <- mean((lasso.partial.pred - test.sub$shares)^2)
 ### Random Forest Regression  
 Random Forest regression is used to de-correlate each model fitting. We use the model the previously get from the backward and both selection method to fit the random forest regression. Take computation limit, and time consumption into account, there are only a few tuning parameters set for the test. 
 
-```{r rf,cache = TRUE}
+```{r rf}
 # create data frame for tuning parameter
 #rf.tGrid <- expand.grid(mtry = seq(from = 1, to = 15, by = 1))
 ctrl2 <- trainControl(method = "cv", number = 2)
@@ -505,7 +505,7 @@ test.MSE.rf2 <- mean((pred.rf2 - test.sub$shares)^2)
 ### Boosting model.(Stochastic Gradient Boosting) 
 Boosting is a slow learn method that learn from the previous fit each time in order to prevent over fitting. We also use the model the previously get from the backward and both selection method to fit the boosted.  
 Boosting tree have several tuning parameters, also, due to some limitation, the number of tuning parameters and cross validation number is set to be small.  
-```{r boost, echo=FALSE,results='hide'}
+```{r boost,results='hide'}
 
 # using boosted method 
 
