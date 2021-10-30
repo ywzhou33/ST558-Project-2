@@ -183,7 +183,7 @@ lm$call[["formula"]]
     ##     kw_max_min + kw_avg_min + kw_avg_max + kw_min_avg + kw_max_avg + 
     ##     kw_avg_avg + LDA_02 + LDA_03 + global_subjectivity + global_sentiment_polarity + 
     ##     rate_positive_words + max_negative_polarity + title_sentiment_polarity
-    ## <environment: 0x000001d08324f778>
+    ## <environment: 0x000001d08ff1cd40>
 
 ``` r
 gsub("[+]", ",", lm$call[["formula"]])
@@ -855,7 +855,7 @@ the automation part.
 
 ``` r
 channels <- unique(X$channel)
-output_file <- paste0(channels,".html")
+output_file <- paste0(channels,".md")
 
 params = lapply(channels, FUN = function(x){list(channel = x)})
 
