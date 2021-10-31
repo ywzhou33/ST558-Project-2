@@ -85,41 +85,24 @@ In this project, subsets by `data_channel_is_*` were produced for automating Mar
 [__rmarkdown__](https://www.rdocumentation.org/packages/rmarkdown/versions/1.7) convert R Markdown documents into a variety of formats  
 [__doParallel__](https://cran.r-project.org/web/packages/doParallel/index.html) Foreach Parallel Adaptor for the 'parallel' Package  
 
-```{r packages}
-library(dplyr)
-library(tidyr)
-library(ggcorrplot)
-library(vcd)
-library(caret)
-library(class)
-library(randomForest)
-library(gbm)
-library(readr)
-library(leaps)
-library(Matrix)
-library(glmnet)
-library(rmarkdown)
-library(doParallel)
-```
-
 ### Links to the generated analyses.  
 
-The analysis for [Lifestyle articles is available here](data_channel_is_lifestyle.html).  
-The analysis for [Entertainment articles is available here](data_channel_is_entertainment.html).  
-The analysis for [Bus articles is available here](data_channel_is_bus.html).  
-The analysis for [Socmed articles is available here](data_channel_is_socmed.html).  
-The analysis for [Tech articles is available here](data_channel_is_tech.html).  
-The analysis for [World articles is available here](data_channel_is_world.html).  
+The analysis for [Lifestyle articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_lifestyle.html).  
+The analysis for [Entertainment articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_entertainment.html).  
+The analysis for [Bus articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_bus.html).  
+The analysis for [Socmed articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_socmed.html).  
+The analysis for [Tech articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_tech.html).  
+The analysis for [World articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_world.html).  
 
 ### Code used to create the analyses.
 
-```{r, eval = FALSE}
+```{r, eval = FALSE}  
 channels <- unique(X$channel)
-output_file <- paste0(channels,".md")
+output.file <- paste0(channels,".md")
 
 params = lapply(channels, FUN = function(x){list(channel = x)})
 
-reports <- tibble(output_file, params)
+reports <- tibble(output.file, params)
 
 library(rmarkdown)
 
