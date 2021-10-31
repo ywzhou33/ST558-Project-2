@@ -83,24 +83,8 @@ In this project, subsets by `data_channel_is_*` were produced for automating Mar
 [__Matrix__](https://cran.r-project.org/web/packages/Matrix/index.html) Sparse and Dense Matrix Classes and Methods  
 [__glmnet__](https://cran.r-project.org/web/packages/glmnet/index.html) Lasso and Elastic-Net Regularized Generalized Linear Models  
 [__rmarkdown__](https://www.rdocumentation.org/packages/rmarkdown/versions/1.7) convert R Markdown documents into a variety of formats  
-[__doParallel__](https://cran.r-project.org/web/packages/doParallel/index.html) Foreach Parallel Adaptor for the 'parallel' Package  
+[__doParallel__](https://cran.r-project.org/web/packages/doParallel/index.html) Foreach Parallel Adaptor for the 'parallel' Package    
 
-```{r packages}
-library(dplyr)
-library(tidyr)
-library(ggcorrplot)
-library(vcd)
-library(caret)
-library(class)
-library(randomForest)
-library(gbm)
-library(readr)
-library(leaps)
-library(Matrix)
-library(glmnet)
-library(rmarkdown)
-library(doParallel)
-```
 
 ### Links to the generated analyses.  
 
