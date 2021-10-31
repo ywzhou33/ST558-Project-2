@@ -115,11 +115,11 @@ The analysis for [World articles is available here](data_channel_is_world.html).
 
 ```{r, eval = FALSE}
 channels <- unique(X$channel)
-output_file <- paste0(channels,".md")
+output.file <- paste0(channels,".md")
 
 params = lapply(channels, FUN = function(x){list(channel = x)})
 
-reports <- tibble(output_file, params)
+reports <- tibble(output.file, params)
 
 library(rmarkdown)
 
