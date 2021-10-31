@@ -96,6 +96,8 @@ The analysis for [Socmed articles is available here](data_channel_is_socmed.html
 The analysis for [Tech articles is available here](data_channel_is_tech.html).  
 The analysis for [World articles is available here](data_channel_is_world.html).  
 
+### Code used to create the analyses.
+
 ```{r, eval = FALSE}
 channels <- unique(X$channel)
 output_file <- paste0(channels,".md")
