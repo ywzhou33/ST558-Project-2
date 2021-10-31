@@ -625,7 +625,7 @@ Select model with lowest RMSE.
 select <- all.compare %>% filter(test_RMSE == min(test_RMSE))
 select
 ```
-The model with lowest RMSE is the `r print(select[[1]])` model. This model has the best performance on test set. 
+The model with lowest RMSE is the `r select[[1]]` model. This model has the best performance on test set. 
 
 ### Automation of data channels  
 
