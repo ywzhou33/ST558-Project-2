@@ -273,7 +273,7 @@ final <- pop.data %>% select(n_tokens_content , n_non_stop_words , n_non_stop_un
 
 set.seed(1033)
 
-# split the data set into training and testing set. Use p = 0.7.
+# split the subset data into training and testing set. Use p = 0.7.
 train.index.sub <- createDataPartition(y = final$shares, p = 0.7, list = F)
 train.sub <- final[train.index.sub, ] # training set
 test.sub <- final[-train.index.sub, ] # test set
@@ -377,6 +377,10 @@ Lasso using all the predictors and get the test MSE
 
 ```{r lasso}
 pop.data <- X %>% filter(channel == params$channel) %>% select(-1:-2)
+
+# split data
+train.index <- createDataPartition(y = pop.data$shares, p = 0.7, list = F)
+
 train.lasso <- pop.data[train.index, ] # training set
 test.lasso <- pop.data[-train.index, ] # test set
 
