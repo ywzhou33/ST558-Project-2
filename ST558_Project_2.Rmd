@@ -1,17 +1,10 @@
 ---
 title: "ST558 Project 2"
 author: "Aries Zhou & Jiatao Wang"
-date: "10/19/2021"
+date: "10/30/2021"
 params: 
   channel: "data_channel_is_lifestyle"
 ---
-
-```{r, echo = FALSE, eval = FALSE}
-#rmarkdown::render("./ST558_Proj_1.Rmd" , 
-#                  output_format = "github_document", 
-#                  output_dir = "./",
-#                  output_options = list(html_preview = FALSE, keep_html=FALSE))
-```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message = FALSE, warning = FALSE, fig.align='center', fig.path = "./")
@@ -21,8 +14,74 @@ knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message = FALSE, warning = FALSE
 
 
 This is a R project using the exploratory data analysis and supervised statistical learning method to analyze a data set.  
-This data set is called __Online News Popularity Data Set__ and you can access the data set [here](https://archive.ics.uci.edu/ml/datasets/Online+News+Popularity)  
+This data set is called __Online News Popularity Data Set__ and you can access the data set [here](https://archive.ics.uci.edu/ml/datasets/Online+News+Popularity)    
+
+The following variables are included in this data.  
+ 
+0. `url`: URL of the article (non-predictive)   
+1. `timedelta`: Days between the article publication and the dataset acquisition (non-predictive)   
+2. `n_tokens_title`: Number of words in the title   
+3. `n_tokens_content`: Number of words in the content   
+4. `n_unique_tokens`: Rate of unique words in the content   
+5. `n_non_stop_words`: Rate of non-stop words in the content   
+6. `n_non_stop_unique_tokens`: Rate of unique non-stop words in the content   
+7. `num_hrefs`: Number of links   
+8. `num_self_hrefs`: Number of links to other articles published by Mashable   
+9. `num_imgs`: Number of images   
+10. `num_videos`: Number of videos   
+11. `average_token_length`: Average length of the words in the content   
+12. `num_keywords`: Number of keywords in the metadata   
+13. `data_channel_is_lifestyle`: Is data channel 'Lifestyle'?   
+14. `data_channel_is_entertainment`: Is data channel 'Entertainment'?   
+15. `data_channel_is_bus`: Is data channel 'Business'?   
+16. `data_channel_is_socmed`: Is data channel 'Social Media'?   
+17. `data_channel_is_tech`: Is data channel 'Tech'?   
+18. `data_channel_is_world`: Is data channel 'World'?   
+19. `kw_min_min`: Worst keyword (min. shares)   
+20. `kw_max_min`: Worst keyword (max. shares)   
+21. `kw_avg_min`: Worst keyword (avg. shares)   
+22. `kw_min_max`: Best keyword (min. shares)   
+23. `kw_max_max`: Best keyword (max. shares)   
+24. `kw_avg_max`: Best keyword (avg. shares)   
+25. `kw_min_avg`: Avg. keyword (min. shares)   
+26. `kw_max_avg`: Avg. keyword (max. shares)   
+27. `kw_avg_avg`: Avg. keyword (avg. shares)   
+28. `self_reference_min_shares`: Min. shares of referenced articles in Mashable   
+29. `self_reference_max_shares`: Max. shares of referenced articles in Mashable   
+30. `self_reference_avg_sharess`: Avg. shares of referenced articles in Mashable   
+31. `weekday_is_monday`: Was the article published on a Monday?   
+32. `weekday_is_tuesday`: Was the article published on a Tuesday?   
+33. `weekday_is_wednesday`: Was the article published on a Wednesday?   
+34. `weekday_is_thursday`: Was the article published on a Thursday?   
+35. `weekday_is_friday`: Was the article published on a Friday?   
+36. `weekday_is_saturday`: Was the article published on a Saturday?   
+37. `weekday_is_sunday`: Was the article published on a Sunday?   
+38. `is_weekend`: Was the article published on the weekend?   
+39. `LDA_00`: Closeness to LDA topic 0   
+40. `LDA_01`: Closeness to LDA topic 1   
+41. `LDA_02`: Closeness to LDA topic 2   
+42. `LDA_03`: Closeness to LDA topic 3   
+43. `LDA_04`: Closeness to LDA topic 4   
+44. `global_subjectivity`: Text subjectivity   
+45. `global_sentiment_polarity`: Text sentiment polarity   
+46. `global_rate_positive_words`: Rate of positive words in the content   
+47. `global_rate_negative_words`: Rate of negative words in the content   
+48. `rate_positive_words`: Rate of positive words among non-neutral tokens   
+49. `rate_negative_words`: Rate of negative words among non-neutral tokens   
+50. `avg_positive_polarity`: Avg. polarity of positive words   
+51. `min_positive_polarity`: Min. polarity of positive words   
+52. `max_positive_polarity`: Max. polarity of positive words   
+53. `avg_negative_polarity`: Avg. polarity of negative words   
+54. `min_negative_polarity`: Min. polarity of negative words   
+55. `max_negative_polarity`: Max. polarity of negative words   
+56. `title_subjectivity`: Title subjectivity   
+57. `title_sentiment_polarity`: Title polarity   
+58. `abs_title_subjectivity`: Absolute subjectivity level   
+59. `abs_title_sentiment_polarity`: Absolute polarity level   
+60. `shares`: Number of shares (the response variables)   
+
 There are lots of measurements/heterogeneous features of articles, including type of the data channel, number of images, number of videos, number of links, counts of words in the title/content, when it is published, summary statistics of polarity of positive/negative words and etc...  
+
 The __main goal__ of this project is to use those features/explanatory variables to predict the popularity(number of the shares in social networks)  
 Before conducting any method to fit the data with models, we want to do some exploratory data analysis (including some summary statistics and graphs) to visualize the data. And then, we will fit the data under regression setting.  
 Supervised learning methods that will be used in this project include: linear regression, generalized linear model, lasso regression, random forest regression, boosted method, or any other method that we will find that could be applicable through our discovering of the data.  
@@ -94,21 +153,29 @@ str(pop.data)
 summary(pop.data$shares)
 ```
 
-The distribution of the response variable (shares) is:   
- - **Right-skewed** if its mean is **greater** than its median.    
- - **Left-skewed** if its mean is **less** than its median.   
- - **Normal** if its mean **equals** to its median.    
+The distribution of the response variable (shares) is:  
+
+  -  **Right-skewed** if its mean is **greater** than its median.    
+  -  **Left-skewed** if its mean is **less** than its median.    
+  -  **Normal** if its mean **equals** to its median.    
 
 Check correlations.    
 
 ```{r cor}
 #get all numeric variables without collinearity
 pop.data.num <- select(pop.data, is.numeric) %>% mutate_all(~(scale(.) %>% as.vector)) 
+```
 
+```{r lm.num, results='hide'}
 # due to the large number of variables, try to get a best subset with the stepwise method. 
 lm <- step(lm(shares ~ ., data = pop.data.num))
-lm$call[["formula"]] # model selected based on AIC. 
+```
 
+```{r}
+lm$call[["formula"]] # model selected based on AIC.
+```
+
+```{r cor.plot}
 # get the selected subset
 num.s <- pop.data.num %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity, shares)
 
@@ -322,6 +389,8 @@ After using the best subset selection, some important variables are: `n_tokens_c
 
 ### Linear Regression  
 
+linear regression models are models that shows linear relationship between the response variable (y) and the predictor variable(s) (x). The coefficients of each predictor variable in the model demonstrate how increase/decrease of the predictor variables influences the change of the response variable. 
+
 Since using all predictors is time-consuming and hard to render in automation, we use the random selected variables(p = 17) from the best subset selection to fit the linear regression models.     
 
 ```{r lm, results='hide'}
@@ -398,7 +467,7 @@ print(lasso.coef.full)
 ```
 
 Lasso method using the 17 predictors.    
-```{r}
+```{r lasso.18}
 #using selected predictors (17 predictors) 
 #use k-fold cv to select best lambda for the lasso regression 
 cv.out <- cv.glmnet(as.matrix(train.sub), train.sub$shares, alpha=1)
@@ -425,6 +494,8 @@ test.RMSE.lasso.full <- RMSE(lasso.pred.full, test.lasso$shares)
 ```
 
 ### Random Forest Regression   
+
+Random Forest is an ensemble tree-based model that helps to solve regression and classification problems. Its algorithm consists of many decision trees, which its forest is generated and train through bootstrapping, expanding the forest improves its precision.   
 
 Random Forest regression is used to de-correlate each model fitting. We use the model the previously get from the forward and both selection method to fit the random forest regression. Take computation limit, and time consumption into account, there are only a few tuning parameters set for the test. 
 
@@ -466,7 +537,7 @@ test.RMSE.rf2 <- RMSE(pred.rf2, test.sub$shares)
 
 
 
-### Boosting model.(Stochastic Gradient Boosting)   
+### Boosting model. (Stochastic Gradient Boosting)     
 
 Boosting is a slow learn method that learn from the previous fit each time in order to prevent over fitting. We also use the model the previously get from the forward and both selection method to fit the boosted.  
 Boosting tree have several tuning parameters, also, due to some limitation, the number of tuning parameters and cross validation number is set to be small.  
