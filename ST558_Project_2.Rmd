@@ -87,7 +87,7 @@ Before conducting any method to fit the data with models, we want to do some exp
 Supervised learning methods that will be used in this project include: linear regression, generalized linear model, lasso regression, random forest regression, boosted method, or any other method that we will find that could be applicable through our discovering of the data.  
 
 
-List of packages used:    
+### List of packages used:  
 
 ```{r packages}
 library(dplyr)
@@ -135,10 +135,11 @@ pop.data$is_weekend <- as.factor(pop.data$is_weekend)
 pop.data$weekday <- as.factor(pop.data$weekday)
 ```
 
+Check if there are observations that are not marked by channel variable.
 ```{r}
 nrow(new_data)< nrow(pop)
 ```
-Since `nrow(new_data)< nrow(pop)` returned `TRUE`, indicating that there are some observations that are not in the types of channel listed in the data set.    
+Since `nrow(new_data)< nrow(pop)` returned `TRUE`, indicating that there are some observations that are not in the types of channel listed in the data set.
 
 
 ## Exploratory Data Analysis   
@@ -148,7 +149,9 @@ Since `nrow(new_data)< nrow(pop)` returned `TRUE`, indicating that there are som
 ```{r str}
 #check data structures.
 str(pop.data)
+```
 
+```{r summary}
 #summary stats for the response variable. 
 summary(pop.data$shares)
 ```
@@ -171,10 +174,13 @@ pop.data.num <- select(pop.data, is.numeric) %>% mutate_all(~(scale(.) %>% as.ve
 lm <- step(lm(shares ~ ., data = pop.data.num))
 ```
 
+This is a multiple linear model selected based on AIC using step function.  
 ```{r}
-lm$call[["formula"]] # model selected based on AIC.
+lm$call[["formula"]] # 
 ```
 
+plot of correlations.  
+For this correlation plot, the color is red if two variables are positively correlated and is blue if two variables are negatively correlated.  
 ```{r cor.plot}
 # get the selected subset
 num.s <- pop.data.num %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity, shares)
@@ -190,7 +196,7 @@ cor.plot <- round(cor(plot.s, use="complete.obs"), 2)
 ggcorrplot(cor.plot, hc.order = TRUE, type = "lower", lab = TRUE)
 ```
 
-For this correlation plot, the color is red if two variables are positively correlated and is blue if two variables are negatively correlated.   
+   
 
 
 Some tables for selected data channel of interest showing the counts and percentage grouped by channel and weekday    
@@ -198,26 +204,30 @@ Some tables for selected data channel of interest showing the counts and percent
 #simple table displaying counts for different type of channel (all obs)
 table(X$channel) 
 
-#some summary stats grouped by channel 
+#some summary stats grouped by channel and weekday
 C1 <- X %>% 
-    group_by( channel ) %>% 
-    summarise( percent = 100 * n() / nrow( new_data ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+    group_by( channel,weekday) %>% 
+    summarise( percent = 100 * n() / nrow(X),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+```
+
+show percentage of channel and weekday grouped for all the observations. as well as means within each group  
+```{r}
 knitr::kable(C1)
+```
 
-
+Show percentage of each grouped category as well as stats  
+```{r}
 # using the subset data set containing weekday info in one column. 
 table(pop.data$weekday)
 C2 <- pop.data %>% 
     group_by( weekday ) %>% 
-    summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+    summarise( percent = 100 * n() / nrow( pop.data ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
 knitr::kable(C2)
-
-table(pop.data$weekday, pop.data$channel)
 
 table(pop.data$channel, pop.data$is_weekend)
 
 C3 <- pop.data %>% group_by(is_weekend)%>% 
-    summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
+    summarise( percent = 100 * n() / nrow( pop.data ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
 knitr::kable(C3)
 
 ```
@@ -250,7 +260,8 @@ Similarly, if the linear regression line shows an upward trend, then articles wi
 
 ```{r scatter3}
 #Scatter plot for Number of Tokens in Content v.s. Number of Links.
-scatter.stop <- ggplot(data = pop.data, aes(x = n_tokens_content, y = num_hrefs))
+scatter.stop <- ggplot(data = pop.data, aes(x = n_tokens_content, 
+                                            y = num_hrefs))
 scatter.stop + geom_point(aes(color = is_weekend)) + 
                geom_smooth(method = "lm") + 
                labs(title = "Number of Tokens in Content v.s. Number of Links", 
@@ -270,33 +281,39 @@ This is a bar plot channel by weekend(is or not)
 ```{r barplot1}
 #bar plot channel by weekend
 bar.weekend <-ggplot(X,aes(x = channel))
-bar.weekend + geom_bar(aes(fill = as.factor(is_weekend)), position = "dodge") + 
-              labs(x = "channel", y = "Count", title = "Channel by Weekend") +
-              theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+bar.weekend + geom_bar(aes(fill = as.factor(is_weekend)), 
+                       position = "dodge") + 
+              labs(x = "channel", y = "Count", 
+                   title = "Channel by Weekend") +
+              theme(axis.text.x = element_text(angle = 45, 
+                                               vjust = 1, hjust = 1)) +
               scale_fill_discrete(name = "is_weekend") 
 ```
-Observe the number of counts from the y-axis of this barplot, we can compare whether there is more shares on the weekends or less shares on weekends for each channels. 
+Observe the number of counts from the y-axis of this barplot, we can compare whether there is more shares on the weekends or less shares on weekends for each channels.  
 
 Boxplot for different channels.      
 
 ```{r boxplot}  
 box <- ggplot(X, aes(x = channel, y = shares))
 box + geom_boxplot(position = "dodge") + 
-      labs(x = "y", title = "Boxplot for popularity with channel type ") + 
+      labs(x = "y", 
+           title = "Boxplot for popularity with channel type ") + 
       scale_x_discrete(name = "channel") + 
       geom_jitter(aes(color = as.factor(weekday))) + 
       scale_y_continuous() + 
-      theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+      theme(axis.text.x = element_text(angle = 45, 
+                                       vjust = 1, hjust = 1)) +
       scale_color_discrete(name = "weekday")
 ```  
-There are some outliers of shares if the points are away from the box.
+There are some outliers of shares if the points are away from the box.  
   
 This is the bar plot : channel by weekday(stacked bar).   
 
 ```{r barplot2}  
 s.bar <- ggplot(X, aes(x = weekday))
 s.bar + geom_bar(aes(fill = as.factor(channel)), 
-                 position = "stack",show.legend = NA) +         labs(x = "weekday") + 
+                 position = "stack",
+                 show.legend = NA) +         labs(x = "weekday") + 
         scale_fill_discrete(name = "channel") + 
         theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
         labs(title = "weekday by channel ")
@@ -314,22 +331,22 @@ The stacked bar helps to understand the proportions between each channels/weekda
 
 ## Modeling(Regression Settings)
 
+Using parallel computing to speed up computations
 ```{r para.comp}
-# Use parallel computing to speed up computations
+ 
 cores <- detectCores()
 cl <- makePSOCKcluster(cores-1)
 registerDoParallel(cl)
 ```
 
 Using 5-fold Cross-Validation.  
-
 ```{r cv}
 ctrl <- trainControl(method = "cv", number = 5)
 ```
  
 ### Split the data set.   
 
-Before fitting any predictive models, we tried some methods that could help reduce the dimension of data.   
+Before fitting any predictive models, we tried some methods that could help reduce the dimension of data.  
 We randomly selected some predictors of interest and perform the best subset selection under the condition of least square linear regression.    
 
 ```{r lm.best.sub}
@@ -389,9 +406,9 @@ After using the best subset selection, some important variables are: `n_tokens_c
 
 ### Linear Regression  
 
-linear regression models are models that shows linear relationship between the response variable (y) and the predictor variable(s) (x). The coefficients of each predictor variable in the model demonstrate how increase/decrease of the predictor variables influences the change of the response variable. 
+linear regression models are models that shows linear relationship between the response variable (y) and the predictor variable(s) (x). The coefficients of each predictor variable in the model demonstrate how increase/decrease of the predictor variables influences the change of the response variable.  
 
-Since using all predictors is time-consuming and hard to render in automation, we use the random selected variables(p = 17) from the best subset selection to fit the linear regression models.     
+Since using all predictors is time-consuming and hard to render in automation, we use the random selected variables(p = 17) from the best subset selection to fit the linear regression models.  
 
 ```{r lm, results='hide'}
 # check the model selected by the best subset selection 
@@ -501,7 +518,7 @@ Random Forest regression is used to de-correlate each model fitting. We use the 
 
 ```{r rf}
 # create data frame for tuning parameter
-rf.tGrid <- expand.grid(mtry = seq(from = 1, to = 15, by = 1))
+rf.tGrid <- expand.grid(mtry = seq(from = 2, to = 7, by = 1))
 
 # train the Random Forest model
 # use model selected by forward selection
@@ -561,21 +578,32 @@ boostTreefit1 <- train(lm2$call[["formula"]], data = train.sub,
                 trControl = ctrl,
                 tuneGrid = boos.grid)
 
-par(mfrow=c(2,2))
-
-plot(boostTreefit1$results$n.trees, boostTreefit1$results$RMSE, 
-     xlab = "n.trees",ylab = "RMSE", type = 'p',main = 'boosted')
-plot(boostTreefit1$results$interaction.depth, boostTreefit1$results$RMSE, 
-     xlab = "subtrees",ylab = "RMSE",type = 'p',main = 'boosted')
-plot(boostTreefit1$results$interaction.depth, boostTreefit1$results$Rsquared, 
-     xlab = "subtrees",ylab = "R^2",type = 'p',main = 'boosted')
-
 # use model selected by both selection
 boostTreefit2 <- train(lm3$call[["formula"]], data = train.sub, 
                  method = "gbm",
                  preProcess = c("center","scale"),
                  trControl = ctrl,
                  tuneGrid = boos.grid)
+
+```
+
+Plot for the RMSE associated with tuning parameters  
+```{r}
+par(mfrow=c(2,2))
+plot(boostTreefit1$results$n.trees, boostTreefit1$results$RMSE, 
+     xlab = "n.trees",ylab = "RMSE", type = 'p',main = 'boosted 1')
+plot(boostTreefit1$results$interaction.depth, boostTreefit1$results$RMSE, 
+     xlab = "subtrees",ylab = "RMSE",type = 'p',main = 'boosted 1')
+plot(boostTreefit1$results$interaction.depth, boostTreefit1$results$Rsquared, 
+     xlab = "subtrees",ylab = "R^2",type = 'p',main = 'boosted 1')
+
+par(mfrow=c(2,2))
+plot(boostTreefit2$results$n.trees, boostTreefit2$results$RMSE, 
+     xlab = "n.trees",ylab = "RMSE", type = 'p',main = 'boosted 2')
+plot(boostTreefit2$results$interaction.depth, boostTreefit2$results$RMSE, 
+     xlab = "subtrees",ylab = "RMSE",type = 'p',main = 'boosted 2')
+plot(boostTreefit2$results$interaction.depth, boostTreefit2$results$Rsquared, 
+     xlab = "subtrees",ylab = "R^2",type = 'p',main = 'boosted 2')
 ```
 
 Check Boosted Tree model performance on test set.   

@@ -70,6 +70,21 @@ In this project, subsets by `data_channel_is_*` were produced for automating Mar
 
 ### List of packages used:      
 
+[__dplyr__](https://dplyr.tidyverse.org/) grammar of data manipulation  
+[__tidyr__](https://tidyr.tidyverse.org/)  create tidy data  
+[__ggcorrplot__](https://cran.r-project.org/web/packages/ggcorrplot/readme/README.html) Visualization of a correlation matrix using ggplot2  
+[__vcd__](https://cran.r-project.org/web/packages/vcd/index.html) Visualizing Categorical Data  
+[__caret__](https://cran.r-project.org/web/packages/caret/vignettes/caret.html) contains functions to streamline the model training process for complex regression and classification problems  
+[__class__](https://cran.r-project.org/web/packages/class/index.html) Various functions for classification, including k-nearest neighbour, Learning Vector Quantization and Self-Organizing Maps.  
+[__randomForest__](https://www.rdocumentation.org/packages/randomForest/versions/4.6-14/topics/randomForest) Classification and Regression with Random Forest  
+[__gbm__](https://www.rdocumentation.org/packages/gbm/versions/2.1.8/topics/gbm)  Fits generalized boosted regression models  
+[__readr__](https://readr.tidyverse.org/) provide a fast and friendly way to read rectangular data  
+[__leaps__](https://www.rdocumentation.org/packages/leaps/versions/3.1/topics/leaps) Visualizing Categorical Data  
+[__Matrix__](https://cran.r-project.org/web/packages/Matrix/index.html) Sparse and Dense Matrix Classes and Methods  
+[__glmnet__](https://cran.r-project.org/web/packages/glmnet/index.html) Lasso and Elastic-Net Regularized Generalized Linear Models  
+[__rmarkdown__](https://www.rdocumentation.org/packages/rmarkdown/versions/1.7) convert R Markdown documents into a variety of formats  
+[__doParallel__](https://cran.r-project.org/web/packages/doParallel/index.html) Foreach Parallel Adaptor for the 'parallel' Package  
+
 ```{r packages}
 library(dplyr)
 library(tidyr)
