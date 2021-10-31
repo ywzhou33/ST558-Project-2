@@ -28,8 +28,9 @@ Before conducting any method to fit the data with models, we want to do some exp
 Supervised learning methods that will be used in this project include: linear regression, generalized linear model, lasso regression, random forest regression, boosted method, or any other method that we will find that could be applicable through our discovering of the data.  
 
 
-List of packages used:  
-```{r}
+List of packages used:    
+
+```{r packages}
 library(dplyr)
 library(tidyr)
 library(ggcorrplot)
@@ -43,107 +44,93 @@ library(leaps)
 library(Matrix)
 library(glmnet)
 library(rmarkdown)
-#library(MASS)
+library(doParallel)
 ```
+
 ## Data Cleaning 
 
 ### Data  
-Read in data and combine certain numerical columns to a single column(categorical)  
-```{r}
+Read in data and transpose data_channel_is* and weekday_is* columns into categorical columns.  
+
+```{r transpose}
 # import data
 pop <- read_csv("OnlineNewsPopularity.csv")
-#check if there is any missing or NA values in the data set 
-anyNA(pop)
 
-#convert the wide to long format (categorize data channel, and make them into one column)
-new <- pop %>% pivot_longer(cols = data_channel_is_lifestyle:data_channel_is_world, names_to = "channel",values_to = 'things') 
-new_data <- new %>% filter(things != 0) %>% select(-things)
+# check if there is any missing or NA values in the data set 
+anyNA(pop) # returned FALSE, so no missing values 
 
-#pop.data2 <- new_data %>% subset(channel == 'data_channel_is_lifestyle') %>% select( -1:-2)
+# convert the wide to long format (categorize data channel, and make them into one column)
+new <- pop %>% pivot_longer(cols = data_channel_is_lifestyle:data_channel_is_world, names_to = "channel",values_to = 'logi.num.d') 
+new_data <- new %>% filter(logi.num.d != 0) %>% select(-logi.num.d) # drop logical number
 
 # merge those weekday columns into one.
-Z <- new_data %>% pivot_longer(cols = weekday_is_monday:weekday_is_sunday, names_to = "weekday",values_to = 'whatever') 
-X <- Z %>% filter(whatever != 0) %>% select(-whatever)
+Z <- new_data %>% pivot_longer(cols = weekday_is_monday:weekday_is_sunday, names_to = "weekday",values_to = 'logi.num.w') 
+X <- Z %>% filter(logi.num.w != 0) %>% select(-logi.num.w) # drop logical numbers
 ```
 
-Subset the data set to be used for the analysis and set the params to do automation  
+Subset data on data channel of interest for analysis and set the params to do automation.  
+
+```{r subset}
+pop.data <- X %>% filter(channel == params$channel) %>% select(-1:-2)
+pop.data$is_weekend <- as.factor(pop.data$is_weekend)
+pop.data$weekday <- as.factor(pop.data$weekday)
+```
+
 ```{r}
-pop.data2 <- X %>% filter(channel == params$channel) %>% select( -1:-2)
-
-#there are some observations that are not in the types of channel listed in the data set. 
 nrow(new_data)< nrow(pop)
-
-
-
-# subset data on data channel of interest
-pop.data <- new_data %>% filter(channel == params$channel) %>% select(-starts_with("data_channel_is_"), -1:-2,-channel)
 ```
+Since `nrow(new_data)< nrow(pop)` returned `TRUE`, indicating that there are some observations that are not in the types of channel listed in the data set.    
 
 
+## Exploratory Data Analysis   
 
-
-## Exploratory Data Analysis 
 ### Summarizations And Graphs  
 
-Some attempts   
+```{r str}
+#check data structures.
+str(pop.data)
 
-```{r}
-pop.data$weekday_is_monday <- as.factor(pop.data$weekday_is_monday)
-pop.data$weekday_is_tuesday <- as.factor(pop.data$weekday_is_tuesday)
-pop.data$weekday_is_wednesday <- as.factor(pop.data$weekday_is_wednesday)
-pop.data$weekday_is_thursday <- as.factor(pop.data$weekday_is_thursday)
-pop.data$weekday_is_friday <- as.factor(pop.data$weekday_is_friday)
-pop.data$weekday_is_saturday <- as.factor(pop.data$weekday_is_saturday)
-pop.data$weekday_is_sunday <- as.factor(pop.data$weekday_is_sunday)
-pop.data$is_weekend <- as.factor(pop.data$is_weekend)
-
-#summary stats for the response varaible. 
+#summary stats for the response variable. 
 summary(pop.data$shares)
+```
 
+The distribution of the response variable (shares) is:   
+ - **Right-skewed** if its mean is **greater** than its median.    
+ - **Left-skewed** if its mean is **less** than its median.   
+ - **Normal** if its mean **equals** to its median.    
 
+Check correlations.    
 
-
-
-# check the counts of binary variables.
-pop.data.char <- pop.data %>% select(is.factor)
-
-
-#table(pop.data.char)
+```{r cor}
+#get all numeric variables without collinearity
 pop.data.num <- select(pop.data, is.numeric) %>% mutate_all(~(scale(.) %>% as.vector)) 
 
+# due to the large number of variables, try to get a best subset with the stepwise method. 
+lm <- step(lm(shares ~ ., data = pop.data.num))
+lm$call[["formula"]] # model selected based on AIC. 
+
+# get the selected subset
+num.s <- pop.data.num %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity, shares)
+
 # check correlations
-cor <- round(cor(pop.data.num, use="complete.obs"), 2)
+cor <- round(cor(num.s, use="complete.obs"), 2)
+
+# select correlated variables without variables with collinearity (ex. kw_min_min and kw_max_min to kw_avg_min)
+plot.s <- num.s %>% select(n_tokens_content, n_non_stop_unique_tokens, n_non_stop_words, num_hrefs, num_videos, kw_avg_avg, shares)
+
+# plot a correlation plot
+cor.plot <- round(cor(plot.s, use="complete.obs"), 2)
+ggcorrplot(cor.plot, hc.order = TRUE, type = "lower", lab = TRUE)
 ```
 
-```{r, echo=TRUE,results='hide'}
-# Consider all numeric variables.
-lm <- step(lm(shares ~ . , data = pop.data.num), direction = "backward")
-```
-
-```{r}
-l.fit<- lm(lm$call[["formula"]], data = pop.data.num)
-summary(l.fit)
-
-lm$call[["formula"]]
-gsub("[+]", ",", lm$call[["formula"]])
-
-pop.data.num.s <- pop.data.num %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity)
-
-cor.selected <- round(cor(pop.data.num, use="complete.obs"), 2)
+For this correlation plot, the color is red if two variables are positively correlated and is blue if two variables are negatively correlated.   
 
 
-ggcorrplot(cor.selected, hc.order = TRUE, type = "lower", lab = TRUE)
-
-```
-
-
-
-
-Some tables for selected data channel of interest showing the counts and percentage grouped by channel and weekday  
-```{r}
-#summary statistics 
+Some tables for selected data channel of interest showing the counts and percentage grouped by channel and weekday    
+```{r tables}
 #simple table displaying counts for different type of channel (all obs)
 table(X$channel) 
+
 #some summary stats grouped by channel 
 C1 <- X %>% 
     group_by( channel ) %>% 
@@ -152,111 +139,103 @@ knitr::kable(C1)
 
 
 # using the subset data set containing weekday info in one column. 
-table(pop.data2$weekday)
-C2 <- pop.data2 %>% 
+table(pop.data$weekday)
+C2 <- pop.data %>% 
     group_by( weekday ) %>% 
     summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
 knitr::kable(C2)
 
-table(pop.data2$weekday, pop.data2$channel)
+table(pop.data$weekday, pop.data$channel)
 
+table(pop.data$channel, pop.data$is_weekend)
 
-#V <- ifelse(X$is_weekend == 0, "No","Yes")
-table(pop.data2$channel, pop.data2$is_weekend)
-
-C3 <- pop.data2 %>% group_by(is_weekend)%>% 
+C3 <- pop.data %>% group_by(is_weekend)%>% 
     summarise( percent = 100 * n() / nrow( X ),mean_shares = mean(shares), mean_images = mean(num_imgs),mean_video = mean(num_videos),mean_link = mean(num_hrefs))
 knitr::kable(C3)
-
 
 ```
 
 ### Graphical summaries  
-
-```{r}
+```{r scatter1}
 #Scatter plot for n_tokens_content v.s. Shares.
-scatter <- ggplot(data = pop.data2, aes(x = n_tokens_content, y = shares))
-scatter + geom_point(aes(color = as.factor(is_weekend))) + 
-geom_smooth(method = lm) + 
-labs(title = "n_tokens_content v.s. Shares", x = "n_tokens_content", y = "shares") + 
-scale_color_discrete(name = "is_weekend")
-
-
-
-
-
-g<-ggplot(pop.data2,aes(x = num_videos, 
-                       y =shares))
-  g + 
-    geom_point(aes(shape = as.factor(is_weekend),
-                   color = as.factor(weekday)),
-               size = 2) + 
-    geom_smooth(method = lm) + 
-    labs(x = "Videos", 
-         y = "shares",
-         title = "Videos vs Shares ")+  
-    scale_shape_manual(values = c(3:4))+
-    scale_color_discrete(name = "weekday")+
-    scale_shape_discrete(name="is.weekend")
-
-
-
-
+scatter.tc <- ggplot(data = pop.data, aes(x = n_tokens_content, y = shares))
+scatter.tc + geom_point(aes(color = is_weekend)) + 
+             geom_smooth(method = "lm") + 
+             labs(title = "Number of Tokens in Content v.s. Shares", x = "Number of tokens in content", y = "shares") + 
+             scale_color_discrete(name = "is_weekend")
 
 ```
 
-#### General plots 
-This is a bar plot channel by weekend(is or not)  
-We can see from the plot that weekend shares far more less than the shares that is not on weekend  
-```{r}
-#some graphs 
+If the linear regression line shows an upward trend, then articles with more words in content tend to be shared more often; if it shows a downward trend, then articles with more words in content tend to be shared less often.    
 
-
-g <-ggplot(X,aes(x = channel))
-  g + 
-    geom_bar(aes(fill = as.factor(is_weekend)),
-               position = "dodge") + 
-    labs(x = "channel", y = "Count", title = "channel by weekend") +
-    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
-    scale_fill_discrete(name = "weekend") 
+```{r scatter2}
+#Scatter plot for Videos v.s. Shares.
+scatter.video <- ggplot(pop.data,aes(x = num_videos, y =shares))
+scatter.video + geom_point(aes(shape = is_weekend, color = weekday), size = 2) + 
+                geom_smooth(method = "lm") + 
+                labs(x = "Videos", y = "Shares", title = "Videos vs Shares ") +  
+                scale_shape_manual(values = c(3:4))+
+                scale_color_discrete(name = "weekday")+
+                scale_shape_discrete(name="is_weekend")
 ```
-  
-  
-  Boxplot for different channels  
-  There are some outliers of shares in certain channels. 
-```{r}  
-g<-ggplot(X,aes(x = channel,
-                       y = shares))
-  g + 
-    geom_boxplot(position = "dodge") + 
-    labs(x = "y",
-         title = "Boxplot for popularity with channel type ")+ 
-    scale_x_discrete(name = "channel")+ 
-    geom_jitter(aes(color = as.factor(weekday))) + 
-    scale_y_continuous() + 
-    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
-    scale_color_discrete(name = "weekday")
+
+Similarly, if the linear regression line shows an upward trend, then articles with more videos tend to be shared more often; if it shows a downward trend, then articles with more videos tend to be shared less often.    
+
+```{r scatter3}
+#Scatter plot for Number of Tokens in Content v.s. Number of Links.
+scatter.stop <- ggplot(data = pop.data, aes(x = n_tokens_content, y = num_hrefs))
+scatter.stop + geom_point(aes(color = is_weekend)) + 
+               geom_smooth(method = "lm") + 
+               labs(title = "Number of Tokens in Content v.s. Number of Links", 
+                    x = "Number of Tokens in Content", 
+                    y = "Number of Links") + 
+               scale_color_discrete(name = "is_weekend")
+
+```
+
+Observing from the plot, if the linear regression line is upward, there is a positive correlation relationship between the number of words and number of links in articles. The number of links increases as the number of words increases in the articles. If the linear regression line is downward, the result is the reverse.   
+
+
+#### General plots   
+
+This is a bar plot channel by weekend(is or not)   
+ 
+```{r barplot1}
+#bar plot channel by weekend
+bar.weekend <-ggplot(X,aes(x = channel))
+bar.weekend + geom_bar(aes(fill = as.factor(is_weekend)), position = "dodge") + 
+              labs(x = "channel", y = "Count", title = "Channel by Weekend") +
+              theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+              scale_fill_discrete(name = "is_weekend") 
+```
+Observe the number of counts from the y-axis of this barplot, we can compare whether there is more shares on the weekends or less shares on weekends for each channels. 
+
+Boxplot for different channels.      
+
+```{r boxplot}  
+box <- ggplot(X, aes(x = channel, y = shares))
+box + geom_boxplot(position = "dodge") + 
+      labs(x = "y", title = "Boxplot for popularity with channel type ") + 
+      scale_x_discrete(name = "channel") + 
+      geom_jitter(aes(color = as.factor(weekday))) + 
+      scale_y_continuous() + 
+      theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+      scale_color_discrete(name = "weekday")
 ```  
+There are some outliers of shares if the points are away from the box.
   
-  
-  
-  This is the bar plot : channel by weekday(stacked bar)
-```{r}  
-  g<-ggplot(X,
-          aes(x = weekday))
-  g + 
-    geom_bar(aes(fill = as.factor(channel)),
-             position = "stack",show.legend = NA) + 
-    labs(x = "weekday")+ 
-    scale_fill_discrete(name = "channel") + 
-    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
-    labs(title = "weekday by channel ")
-  
+This is the bar plot : channel by weekday(stacked bar).   
+
+```{r barplot2}  
+s.bar <- ggplot(X, aes(x = weekday))
+s.bar + geom_bar(aes(fill = as.factor(channel)), 
+                 position = "stack",show.legend = NA) +         labs(x = "weekday") + 
+        scale_fill_discrete(name = "channel") + 
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+        labs(title = "weekday by channel ")
  # or  
-   g<-ggplot(X,
-          aes(x = channel))
-  g + 
-    geom_bar(aes(fill = as.factor(weekday)),
+g <- ggplot(X, aes(x = channel))
+g + geom_bar(aes(fill = as.factor(weekday)),
              position = "stack",show.legend = NA) + 
     labs(x = "channel")+ 
     scale_fill_discrete(name = "weekday") + 
@@ -264,55 +243,51 @@ g<-ggplot(X,aes(x = channel,
     labs(title = " channel by weekday ")
 ```
 
+The stacked bar helps to understand the proportions between each channels/weekdays by comparing the size of rectangles. (Different colors represent different channels/weekdays.)   
 
 ## Modeling(Regression Settings)
 
-### Split the data set. 
-Split the data set into training and testing set. Use p = 0.7.  
-```{r split.data}
-# set seed
-set.seed(234)
-
-train.index <- createDataPartition(y = pop.data$shares, p = 0.7, list = F)
-train <- pop.data[train.index, ] # training set
-test <- pop.data[-train.index, ] # test set
-
-#train.index<- sample(1:nrow(pop.data), size = nrow(pop.data) *0.7)
-#test.index<- dplyr::setdiff(1:nrow(pop.data), train)
-
-#train <- pop.data[train.index, ] # training set
-#test <- pop.data[test.index, ] # test set
+```{r para.comp}
+# Use parallel computing to speed up computations
+cores <- detectCores()
+cl <- makePSOCKcluster(cores-1)
+registerDoParallel(cl)
 ```
 
-### Linear Regression   
+Using 5-fold Cross-Validation.  
 
-Before fitting any predictive models, we tried some methods that could help reduce the dimension of data.  
-We randomly selected some predictors of interest and perform the best subset selection under the condition of least square linear regression.  
-```{r}
+```{r cv}
+ctrl <- trainControl(method = "cv", number = 5)
+```
+ 
+### Split the data set.   
 
+Before fitting any predictive models, we tried some methods that could help reduce the dimension of data.   
+We randomly selected some predictors of interest and perform the best subset selection under the condition of least square linear regression.    
+
+```{r lm.best.sub}
 # for the variable that can be used in the linear regression model. 
 # try best subset selection, select number of variables using adjusted R^2, and mallow's cp, BIC,
  
-final <- pop.data2 %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_imgs,num_keywords, num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess ,global_rate_positive_words,rate_positive_words, abs_title_subjectivity,abs_title_sentiment_polarity,shares)
+final <- pop.data %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_imgs,num_keywords, num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess ,global_rate_positive_words,rate_positive_words, abs_title_subjectivity,abs_title_sentiment_polarity,shares)
 
+set.seed(1033)
 
+# split the data set into training and testing set. Use p = 0.7.
 train.index.sub <- createDataPartition(y = final$shares, p = 0.7, list = F)
 train.sub <- final[train.index.sub, ] # training set
 test.sub <- final[-train.index.sub, ] # test set
 
-
-regression1 <- regsubsets(shares ~., data = train.sub,nvmax=17)
+regression1 <- regsubsets(shares ~., data = train.sub, nvmax=17)
 hh1<-summary(regression1)
 
 # this is the indicators of the variables that are supposed to be included in the model each time(iteration)
 knitr::kable(hh1$which)
 ```
 
+A simple function that helps to get the model for the best subset selection.  
 
-
-A simple function that helps to get the model for the best subset selection
-```{r}
-
+```{r model.bs}
 get_model_formula <- function(id, object, outcome){
   # get models data
   models <- hh1$which[id,-1]
@@ -324,20 +299,15 @@ get_model_formula <- function(id, object, outcome){
 }
 ```
 
+Using mallow's cp, BIC and Adjusted R^2, to do model selection.   
 
-
-
-Using mallow's cp, BIC and Adjusted R^2, to do model selection. 
-```{r}
+```{r select.bs}
 gk <- data.frame(
   Adj.R2 = which.max(hh1$adjr2),
   CP = which.min(hh1$cp),
   BIC = which.min(hh1$bic)
 )
 knitr::kable(gk)
-
-
-
 
 par(mfrow=c(2,2))
 plot(hh1$cp ,xlab="Number of Variables ",ylab="Mallow's Cp", type='b')
@@ -346,77 +316,73 @@ plot(hh1$bic,xlab="Number of Variables ",ylab="BIC ", type='b')
 
 # using the mallow's cp to choose model size. 
 best_subset_model <- get_model_formula(which.min(hh1$cp),models,"shares")
-
-
-
-
-
-#for the linear regression, after using the best subset selection, some important variables are 
-#n_tokens_content num_videos   n_non_stop_words   n_non_stop_unique_tokens    self_reference_min_shares  kw_avg_avg  abs_title_subjectivity  kw_max_avg
 ```
 
+After using the best subset selection, some important variables are: `n_tokens_content`, `num_videos`,   `n_non_stop_words`, `n_non_stop_unique_tokens`, `self_reference_min_shares`, `kw_avg_avg`, `abs_title_subjectivity`, and `kw_max_avg`.   
 
+### Linear Regression  
 
-Since using all predictors is time-consuming and hard to render in automation, we use the random selected variables(p = 17) :predictors chosen from backward selection, and best subset selection to fit the linear model.  
+Since using all predictors is time-consuming and hard to render in automation, we use the random selected variables(p = 17) from the best subset selection to fit the linear regression models.     
+
 ```{r lm, results='hide'}
-# Consider all numeric variables.
-lm1 <- step(lm(shares ~ . , data = train.sub), direction = "backward",use.start = TRUE)
-
-lm2 <- step(lm(lm1$call[["formula"]], data = train.sub), scope = . ~.^2, direction = "both",use.start = TRUE)
-```
-Fit the linear regression using cross validation  
-```{r}
-ctrl <- trainControl(method = "cv", number = 5)
-
-# fit the model chosen from the backward selection for all linear terms, 
-lm.fit1 <- train(lm1$call[["formula"]], data = train.sub, 
+# check the model selected by the best subset selection 
+lm.fit1 <- train(best_subset_model, data = train.sub,
                  method = "lm", preProcess =c("center", "scale"), 
                  trControl = ctrl)
-#lm.fit1$results[2:4]
 
-#fit the model chosen from both forward and backward method for the interaction terms and linear terms. 
+# Consider all variables in the best subset, pick a model using forward selection method.
+lm2 <- step(lm(shares ~ . , data = train.sub), direction = "forward")
+
+# fit the model chosen from the forward selection for all linear terms
 lm.fit2 <- train(lm2$call[["formula"]], data = train.sub, 
                  method = "lm", preProcess =c("center", "scale"), 
                  trControl = ctrl)
 
-#check the model selected by the best subset selection 
-lm.fit3 <- train(best_subset_model,data = train.sub,
+# Consider variables selected with forward selection (with 2-way interactions).
+lm3 <- step(lm(lm2$call[["formula"]], data = train.sub), scope = . ~.^2, direction = "both", use.start = TRUE)
+
+# fit the model chosen from both forward and backward method for the interaction terms and linear terms. 
+lm.fit3 <- train(lm3$call[["formula"]], data = train.sub, 
                  method = "lm", preProcess =c("center", "scale"), 
                  trControl = ctrl)
+```
 
+```{r fit3}
 # create a table to compare the results of linear regression from training data 
-lm.compare <- data.frame(models= c("lm.fit1", "lm.fit2","lm.fit3"), results = bind_rows(lm.fit1$results[2:4], lm.fit2$results[2:4], lm.fit3$results[2:4]))
+lm.compare <- data.frame(models= c("lm.fit1", "lm.fit2","lm.fit3"), 
+                         results = bind_rows(lm.fit1$results[2:4], lm.fit2$results[2:4], lm.fit3$results[2:4]))
 knitr::kable(lm.compare) 
+```
 
-#select the linear model with lowest RMSE. 
-#lm.select <- lm.compare %>% filter(results.RMSE == min(results.RMSE))
+Check Linear Regression model performance on test set   
 
-#lm.select
-
+```{r lm.pred}
+# Best subset
 pred.lm1 <- predict(lm.fit1, newdata = test.sub)
-test.MSE.lm1 <- mean((pred.lm1 - test.sub$shares)^2)
+test.RMSE.lm1 <- RMSE(pred.lm1, test.sub$shares)
 
+# Forward
 pred.lm2 <- predict(lm.fit2, newdata = test.sub)
-test.MSE.lm2 <- mean((pred.lm2 - test.sub$shares)^2)
+test.RMSE.lm2 <- RMSE(pred.lm2, test.sub$shares)
 
+# both
 pred.lm3 <- predict(lm.fit3, newdata = test.sub)
-test.MSE.lm3 <- mean((pred.lm3 - test.sub$shares)^2)
+test.RMSE.lm3 <- RMSE(pred.lm3, test.sub$shares)
 ```
 
 
+### Lasso Regression   
+Since lasso perform the variable selection, we tried to use Lasso Regression(adding tuning parameter/ penalty)   
+Lasso using all the predictors and get the test MSE   
 
-### Lasso Regression 
-Since lasso perform the variable selection, we tried to use Lasso Regression(adding tuning parameter/ penalty) 
-
-
-Lasso using all the predictors and get the test MSE  
 ```{r lasso}
-
-train.lasso <- pop.data2[train.index, ] # training set
-test.lasso <- pop.data2[-train.index, ] # test set
+pop.data <- X %>% filter(channel == params$channel) %>% select(-1:-2)
+train.lasso <- pop.data[train.index, ] # training set
+test.lasso <- pop.data[-train.index, ] # test set
 
 # using all predictors (52 predictors)
 cv.out.full <- cv.glmnet(as.matrix(train.lasso[,-47:-48]), train.lasso$shares, alpha=1)
+
 #MSE versus the log(lambda)
 plot(cv.out.full,main = "tuning parameter selection for lasso(full predictors)")
 best.lambda.full <- cv.out.full$lambda.min
@@ -425,17 +391,9 @@ best.lambda.full <- cv.out.full$lambda.min
 lasso.fit.full <- glmnet(train.lasso[,-46:-48] ,train.lasso$shares, alpha = 1, lambda = best.lambda.full)
 lasso.coef.full <- predict(lasso.fit.full, type = "coefficients")
 print(lasso.coef.full)
-
-lasso.pred.full <- predict(lasso.fit.full, newx= as.matrix(test.lasso[,-46:-48]))
-test.MSE.lasso.full <- mean((lasso.pred.full - test.lasso$shares)^2)
-
-
-
-
-
 ```
 
-Lasso method using the 17 predictors and get test MSE  
+Lasso method using the 17 predictors.    
 ```{r}
 #using selected predictors (17 predictors) 
 #use k-fold cv to select best lambda for the lasso regression 
@@ -448,142 +406,156 @@ best.lambda <- cv.out$lambda.min
 lasso.fit.18 <- glmnet(train.sub[,-18] ,train.sub$shares, alpha = 1, lambda = best.lambda)
 lasso.coef <- predict(lasso.fit.18, type = "coefficients")
 print(lasso.coef)
-
-lasso.partial.pred <- predict(lasso.fit.18, newx= as.matrix(test.sub[,-18]))
-test.MSE.lasso.partial <- mean((lasso.partial.pred - test.sub$shares)^2)
-
-
-
-
-
-
-
-
-
 ```
 
+Check Lasso performance on test set.    
 
+```{r lasso.pred}
+# Using the 17 predictors
+lasso.partial.pred <- predict(lasso.fit.18, newx= as.matrix(test.sub[,-18]))
+test.RMSE.lasso.partial <- RMSE(lasso.partial.pred, test.sub$shares)
 
-### Random Forest Regression  
-Random Forest regression is used to de-correlate each model fitting. We use the model the previously get from the backward and both selection method to fit the random forest regression. Take computation limit, and time consumption into account, there are only a few tuning parameters set for the test. 
+# Using all predictors (52 predictors)
+lasso.pred.full <- predict(lasso.fit.full, newx= as.matrix(test.lasso[,-46:-48]))
+test.RMSE.lasso.full <- RMSE(lasso.pred.full, test.lasso$shares)
+```
+
+### Random Forest Regression   
+
+Random Forest regression is used to de-correlate each model fitting. We use the model the previously get from the forward and both selection method to fit the random forest regression. Take computation limit, and time consumption into account, there are only a few tuning parameters set for the test. 
 
 ```{r rf}
 # create data frame for tuning parameter
-#rf.tGrid <- expand.grid(mtry = seq(from = 1, to = 15, by = 1))
-ctrl2 <- trainControl(method = "cv", number = 2)
+rf.tGrid <- expand.grid(mtry = seq(from = 1, to = 15, by = 1))
+
 # train the Random Forest model
-rf.fit1 <- train(lm1$call[["formula"]], data = train.sub, 
-             method = "rf", trControl = ctrl2, 
+# use model selected by forward selection
+rf.fit1 <- train(lm2$call[["formula"]], data = train.sub, 
+             method = "rf", trControl = ctrl, 
              preProcess = c("center", "scale"), 
-             tuneGrid =data.frame(mtry = c(3,4,5)))
-#new method 
+             tuneGrid = rf.tGrid)
 
-
-#library("randomForest")
-#random1<-randomForest(formula = lm1$call[["formula"]], data = train.sub, mtry = 3, importance = T)
-#random2<-randomForest(formula = lm1$call[["formula"]], data = train.sub, mtry = 4, importance = T)
-#random3<-randomForest(formula = lm1$call[["formula"]], data = train.sub, mtry = 5, importance = T)
-
-rf.fit2 <- train(lm2$call[["formula"]], data = train.sub, 
-             method = "rf", trControl = ctrl2, 
+# use model selected by both selection
+rf.fit2 <- train(lm3$call[["formula"]], data = train.sub, 
+             method = "rf", trControl = ctrl, 
              preProcess = c("center", "scale"), 
-             tuneGrid =data.frame(mtry = c(3,4,5)))
-# create a table to compare the results of linear regression
-plot(rf.fit1$results$mtry, rf.fit1$results$RMSE, xlab = "mtry",ylab = "RMSE",type = 'p',main = 'random forest')
-plot(rf.fit2$results$mtry, rf.fit2$results$RMSE, xlab = "mtry",ylab = "RMSE",type = 'p',main = 'random forest')
+             tuneGrid = rf.tGrid)
 
+# plot RMSE for each iteration
+plot(rf.fit1$results$mtry, rf.fit1$results$RMSE, 
+     xlab = "mtry",ylab = "RMSE",type = 'p',main = 'random forest')
+plot(rf.fit2$results$mtry, rf.fit2$results$RMSE, 
+     xlab = "mtry",ylab = "RMSE",type = 'p',main = 'random forest')
+```
+
+Check Random Forest model performance on test set.    
+
+```{r rf.pred}
+# start model selected by forward
 pred.rf1 <- predict(rf.fit1, newdata = test.sub)
-test.MSE.rf1 <- mean((pred.rf1 - test.sub$shares)^2)
+test.RMSE.rf1 <- RMSE(pred.rf1, test.sub$shares)
 
+# start model selected by both
 pred.rf2 <- predict(rf.fit2, newdata = test.sub)
-test.MSE.rf2 <- mean((pred.rf2 - test.sub$shares)^2)
-
+test.RMSE.rf2 <- RMSE(pred.rf2, test.sub$shares)
 ```
 
 
 
-### Boosting model.(Stochastic Gradient Boosting) 
-Boosting is a slow learn method that learn from the previous fit each time in order to prevent over fitting. We also use the model the previously get from the backward and both selection method to fit the boosted.  
+### Boosting model.(Stochastic Gradient Boosting)   
+
+Boosting is a slow learn method that learn from the previous fit each time in order to prevent over fitting. We also use the model the previously get from the forward and both selection method to fit the boosted.  
 Boosting tree have several tuning parameters, also, due to some limitation, the number of tuning parameters and cross validation number is set to be small.  
+
 ```{r boost,results='hide'}
-
-# using boosted method 
-
-
-#final <- pop.data %>% select(n_tokens_content , n_non_stop_words , n_non_stop_unique_tokens , num_hrefs , num_videos , kw_avg_max , kw_min_avg , kw_max_avg , kw_avg_avg , self_reference_min_shares , self_reference_avg_sharess , abs_title_subjectivity,shares)
-
-
-#train.index <- createDataPartition(y = final$shares, p = 0.7, list = F)
-#train.sub <- final[train.index, ] # training set
-#test.sub <- final[-train.index, ] # test set
-
-
-# boosted tree 
+# set tuning parameters
 tune1 = c(25,50,100,150,200)
 tune2 = c(1:10)
 tune3 = 0.01
-tune4= 10
-boostTreefit1 <- train(lm1$call[["formula"]], data = train.sub, 
+tune4 = 10
+boos.grid <- expand.grid(n.trees = tune1, 
+                         interaction.depth = tune2, 
+                         shrinkage = tune3, 
+                         n.minobsinnode = tune4)
+
+# train the Boosted Tree model
+# use model selected by forward selection
+boostTreefit1 <- train(lm2$call[["formula"]], data = train.sub, 
                 method = "gbm",
                 preProcess = c("center","scale"),
-              trControl = trainControl(method = "cv",number = 3),
-              tuneGrid = expand.grid(n.trees = tune1,interaction.depth = tune2,shrinkage= tune3,n.minobsinnode= tune4))
+                trControl = ctrl,
+                tuneGrid = boos.grid)
+
 par(mfrow=c(2,2))
-plot(boostTreefit1$results$n.trees, boostTreefit1$results$RMSE, xlab = "n.trees",ylab = "RMSE",type = 'p',main = 'boosted')
-plot(boostTreefit1$results$interaction.depth, boostTreefit1$results$RMSE, xlab = "subtrees",ylab = "RMSE",type = 'p',main = 'boosted')
-plot(boostTreefit1$results$interaction.depth, boostTreefit1$results$Rsquared, xlab = "subtrees",ylab = "R^2",type = 'p',main = 'boosted')
 
+plot(boostTreefit1$results$n.trees, boostTreefit1$results$RMSE, 
+     xlab = "n.trees",ylab = "RMSE", type = 'p',main = 'boosted')
+plot(boostTreefit1$results$interaction.depth, boostTreefit1$results$RMSE, 
+     xlab = "subtrees",ylab = "RMSE",type = 'p',main = 'boosted')
+plot(boostTreefit1$results$interaction.depth, boostTreefit1$results$Rsquared, 
+     xlab = "subtrees",ylab = "R^2",type = 'p',main = 'boosted')
 
-tune1 = c(25,50,100,150,200)
-tune2 = c(1:10)
-tune3 = 0.01
-tune4= 10
-boostTreefit2 <- train(lm2$call[["formula"]], data = train.sub, 
-                method = "gbm",
-                preProcess = c("center","scale"),
-              trControl = trainControl(method = "cv",number = 3),
-              tuneGrid = expand.grid(n.trees = tune1,interaction.depth = tune2,shrinkage= tune3,n.minobsinnode= tune4))
+# use model selected by both selection
+boostTreefit2 <- train(lm3$call[["formula"]], data = train.sub, 
+                 method = "gbm",
+                 preProcess = c("center","scale"),
+                 trControl = ctrl,
+                 tuneGrid = boos.grid)
+```
+
+Check Boosted Tree model performance on test set.   
+
+```{r boost.pred}
+# start model selected by forward
+pred.boost1 <- predict(boostTreefit1 , newdata = test.sub)
+test.RMSE.boost1 <- RMSE(pred.boost1, test.sub$shares)
+
+# start model selected by both
+pred.boost2 <- predict(boostTreefit2 , newdata = test.sub)
+test.RMSE.boost2 <- RMSE(pred.boost2, test.sub$shares)
+
 ```
 
 ```{r}
-pred.boost1 <- predict(boostTreefit1 , newdata = test.sub)
-
-test.MSE.boost1 <- mean((pred.boost1 - test.sub$shares)^2)
-
-pred.boost2 <- predict(boostTreefit2 , newdata = test.sub)
-
-test.MSE.boost2 <- mean((pred.boost2 - test.sub$shares)^2)
-
-
-
-
-
+# done with parallel computing 
+stopCluster(cl)
 ```
-### Discussion and Model Selection 
-lm.fit1 is using backward selection to select variables of most interest.  
-lm.fit2 is adding the interaction terms to the model fitting  
-im.fit3 is chosen by the best subset selection  
-lasso.fit.full is using the lasso regression to fit the model for all predictors (it also perform variable selection)  
-lasso.fit.18 is using the lasso regression to fit the model for random selected predictors(17 predictors )  
-rf.fit1/rf.fit2 is using de-correlated method to reduce the variance  
-boost.fit is using cross validation to select appropriate tuning parameter for the boosted model and use it for prediction.  
+
+### Discussion and Model Selection     
+
+ - lm.fit1 is chosen by the best subset selection   
+ - lm.fit2 is using forward selection to select variables of most interest.    
+ - lm.fit3 is adding the interaction terms to the model fitting  
+ - lasso.fit.full is using the lasso regression to fit the model for all predictors (it also perform variable selection)    
+ - lasso.fit.18 is using the lasso regression to fit the model for random selected predictors(17 predictors )    
+ - rf.fit1/rf.fit2 is using de-correlated method to reduce the variance  
+ - boost.fit is using cross validation to select appropriate tuning parameter for the boosted model and use it for prediction.    
+
 This is a simple table containing these methods and the Root Mean Square Error for each model fitting.  
 ```{r}
-all.compare <- data.frame(models= c("lm.fit1", "lm.fit2","lm.fit3","lasso.fit.full","lasso.fit.18","rf.fit1","rf.fit2","boostTreefit1","boostTreefit2"), test_RMSE = rbind(sqrt(test.MSE.lm1),sqrt(test.MSE.lm2),sqrt(test.MSE.lm3),sqrt(test.MSE.lasso.full),sqrt(test.MSE.lasso.partial),sqrt(test.MSE.rf1),sqrt(test.MSE.rf2),sqrt(test.MSE.boost1),sqrt(test.MSE.boost2)))
+all.compare <- data.frame(models= c("lm.fit1", "lm.fit2","lm.fit3",
+                                    "lasso.fit.full","lasso.fit.18",
+                                    "rf.fit1","rf.fit2",
+                                    "boostTreefit1","boostTreefit2"), 
+                          test_RMSE = c(test.RMSE.lm1, test.RMSE.lm2, test.RMSE.lm3,
+                                            test.RMSE.lasso.full, test.RMSE.lasso.partial,
+                                            test.RMSE.rf1, test.RMSE.rf2, 
+                                            test.RMSE.boost1, test.RMSE.boost2))
 knitr::kable(all.compare) 
-
-
-
-
-
-
-
-
 ```
 
+Select model with lowest RMSE.    
 
-### Automation of data_channel is***
-We need to read in libraries as well as some data set before knitting the automation part. 
+```{r}
+select <- all.compare %>% filter(test_RMSE == min(test_RMSE))
+select
+```
+The model with lowest RMSE is the `r print(select[[1]])` model. This model has the best performance on test set. 
+
+### Automation of data channels  
+
+We need to read in libraries as well as some data set before knitting the automation part.  
+
 ```{r, eval = FALSE}
 channels <- unique(X$channel)
 output_file <- paste0(channels,".md")
