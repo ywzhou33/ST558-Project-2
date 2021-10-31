@@ -66,17 +66,7 @@ The following variables are included in this data.
 59. `abs_title_sentiment_polarity`: Absolute polarity level   
 60. `shares`: Number of shares (the response variables)   
 
-In this project, subsets by `data_channel_is_*` were produced for automating Markdown reports. Variables were selected from each subset by the best subset and stepwise selction methods. Predictive models including the linear regression models, lasso models, random forest models and boosted tree models were constructed using 5-fold cross-validation. These models were first constructed on training data set and than tested on test data set. The best model were selected based on lowest RMSE. 
-
-### Links to the generated analyses.  
-
-The analysis for [Lifestyle articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_lifestyle.html).  
-The analysis for [Entertainment articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_entertainment.html).  
-The analysis for [Bus articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_bus.html).  
-The analysis for [Socmed articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_socmed.html).  
-The analysis for [Tech articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_tech.html).  
-The analysis for [World articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_world.html).  
-
+In this project, subsets by `data_channel_is_*` were produced for automating Markdown reports. Variables were selected from each subset by the best subset and stepwise selction methods. Predictive models including the linear regression models, lasso models, random forest models and boosted tree models were constructed using 5-fold cross-validation. These models were first constructed on training data set and than tested on test data set. The best model were selected based on lowest RMSE.   
 
 ### List of packages used:      
 
@@ -95,16 +85,24 @@ The analysis for [World articles is available here](https://ckatony.github.io/ST
 [__rmarkdown__](https://www.rdocumentation.org/packages/rmarkdown/versions/1.7) convert R Markdown documents into a variety of formats  
 [__doParallel__](https://cran.r-project.org/web/packages/doParallel/index.html) Foreach Parallel Adaptor for the 'parallel' Package  
 
+### Links to the generated analyses.  
+
+The analysis for [Lifestyle articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_lifestyle.html).  
+The analysis for [Entertainment articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_entertainment.html).  
+The analysis for [Bus articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_bus.html).  
+The analysis for [Socmed articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_socmed.html).  
+The analysis for [Tech articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_tech.html).  
+The analysis for [World articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_world.html).  
 
 ### Code used to create the analyses.
 
 ```{r, eval = FALSE}  
 channels <- unique(X$channel)
-output.file <- paste0(channels,".md")
+output_file <- paste0(channels,".md")
 
 params = lapply(channels, FUN = function(x){list(channel = x)})
 
-reports <- tibble(output.file, params)
+reports <- tibble(output_file, params)
 
 library(rmarkdown)
 
