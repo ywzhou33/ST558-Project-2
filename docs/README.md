@@ -68,6 +68,7 @@ The following variables are included in this data.
 
 In this project, subsets by `data_channel_is_*` were produced for automating Markdown reports. Variables were selected from each subset by the best subset and stepwise selction methods. Predictive models including the linear regression models, lasso models, random forest models and boosted tree models were constructed using 5-fold cross-validation. These models were first constructed on training data set and than tested on test data set. The best model were selected based on lowest RMSE.   
 
+
 ### List of packages used:      
 
 [__dplyr__](https://dplyr.tidyverse.org/) grammar of data manipulation  
@@ -85,6 +86,7 @@ In this project, subsets by `data_channel_is_*` were produced for automating Mar
 [__rmarkdown__](https://www.rdocumentation.org/packages/rmarkdown/versions/1.7) convert R Markdown documents into a variety of formats  
 [__doParallel__](https://cran.r-project.org/web/packages/doParallel/index.html) Foreach Parallel Adaptor for the 'parallel' Package  
 
+
 ### Links to the generated analyses.  
 
 The analysis for [Lifestyle articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_lifestyle.html).  
@@ -93,6 +95,7 @@ The analysis for [Bus articles is available here](https://ckatony.github.io/ST55
 The analysis for [Socmed articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_socmed.html).  
 The analysis for [Tech articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_tech.html).  
 The analysis for [World articles is available here](https://ckatony.github.io/ST558-Project-2/data_channel_is_world.html).  
+
 
 ### Code used to create the analyses.
 
